@@ -144,8 +144,8 @@ public class MainActivity extends Activity {
     }
     private class IndustrialHero extends TextView {
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\n记录事故 · 分析原因 · 闭环整改");setTextColor(0xFFFFFFFF);setTextSize(21);
-            setTypeface(null,Typeface.BOLD);setPadding(20,28,20,28);setMinHeight(180);}
+        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\n现场异常记录 · 分析 · 整改闭环");setTextColor(0xFFFFFFFF);setTextSize(20);
+            setGravity(android.view.Gravity.CENTER_VERTICAL|android.view.Gravity.LEFT);setTypeface(null,Typeface.BOLD);setPadding(22,28,20,28);setMinHeight(194);}
         @Override protected void onDraw(android.graphics.Canvas canvas){
             float w=getWidth(),h=getHeight();
             paint.setStyle(android.graphics.Paint.Style.FILL);
@@ -204,12 +204,12 @@ public class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout body=new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(2,8,2,8);
+        body.setPadding(8,10,8,12);
         scroll.addView(body);
         android.widget.FrameLayout heroFrame=new android.widget.FrameLayout(this);
         IndustrialHero hero=new IndustrialHero(this);
         hero.setElevation(4);
-        heroFrame.addView(hero,new android.widget.FrameLayout.LayoutParams(-1,-2));
+        android.widget.FrameLayout.LayoutParams heroLp=new android.widget.FrameLayout.LayoutParams(-1,-2);\n        heroFrame.addView(hero,heroLp);
         TextView gear=new TextView(this);
         gear.setText("⚙"); gear.setTextSize(24); gear.setTextColor(0xFFFFFFFF);
         gear.setGravity(android.view.Gravity.CENTER); gear.setBackground(rounded(0x55304F78,30));
