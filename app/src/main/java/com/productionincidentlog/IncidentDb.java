@@ -115,6 +115,12 @@ public class IncidentDb extends SQLiteOpenHelper {
 
 
 
+    public void updateAttachmentUri(String code, String oldUri, String newUri) {
+        ContentValues values = new ContentValues(); values.put("uri", newUri);
+        getWritableDatabase().update("incident_attachments", values,
+            "incident_code=? AND uri=?", new String[]{code, oldUri});
+    }
+
     public List<String[]> statusHistory(String code) {
         List<String[]> rows = new ArrayList<>();
         try (Cursor c = getReadableDatabase().rawQuery("SELECT old_status,new_status,changed_at FROM incident_status_history WHERE incident_code=? ORDER BY id DESC", new String[]{code})) {
