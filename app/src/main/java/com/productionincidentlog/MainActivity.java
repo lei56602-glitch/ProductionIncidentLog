@@ -1044,8 +1044,8 @@ public class MainActivity extends Activity {
             result.addView(totalCard,totalLp);
             totalCard.setOnClickListener(v->showFilteredRecords("全部筛选事故",rows));
             addStatisticGroup(result,"事故类型",rows,4,new String[]{"设备损伤","物料混料","人员受伤"});
-            addStatisticGroup(result,"班组分布",rows,2,new String[]{"A班","B班"});
-            addStatisticGroup(result,"区域分布",rows,3,new String[]{"造粒","仓库"});
+            addStatisticGroup(result,"班组分布",rows,2,uniqueColumnValues(rows,2));
+            addStatisticGroup(result,"区域分布",rows,3,uniqueColumnValues(rows,3));
             java.util.Map<String,Integer> devices=new java.util.TreeMap<>();
             java.util.Map<String,Integer> months=new java.util.TreeMap<>();
             for(String[] r:rows) {
@@ -1079,6 +1079,12 @@ public class MainActivity extends Activity {
         };
         body.addView(button("应用筛选并统计",calculate)); body.addView(result); calculate.run();
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("统计");
+    }
+
+    private String[] uniqueColumnValues(List<String[]> rows,int column) {
+        java.util.Set<String> values=new java.util.TreeSet<>();
+        for(String[] row:rows) if(row[column]!=null&&!row[column].trim().isEmpty()) values.add(row[column]);
+        return values.toArray(new String[0]);
     }
 
     private void addStatisticGroup(LinearLayout target,String heading,List<String[]> rows,int column,String[] categories) {
