@@ -51,7 +51,9 @@ public class MainActivity extends Activity {
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(14,0,14,10); root.setBackgroundColor(bg);
         LinearLayout header=new LinearLayout(this); header.setGravity(android.view.Gravity.CENTER_VERTICAL); header.setPadding(10,14,10,14); header.setBackground(rounded(0xFF0866D8,24));
         TextView h=new TextView(this); h.setText(title); h.setTextSize(21); h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
-        header.addView(h,new LinearLayout.LayoutParams(0,-2,1)); root.addView(header,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
+        header.addView(h,new LinearLayout.LayoutParams(0,-2,1));
+        if("生产事故管理系统".equals(title)){TextView gear=new TextView(this);gear.setText("⚙");gear.setTextSize(23);gear.setTextColor(0xFFFFFFFF);gear.setPadding(12,0,4,0);header.addView(gear);gear.setOnClickListener(v->settingsCenter());}
+        root.addView(header,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
         getWindow().setStatusBarColor(0xFF0759C5); getWindow().setNavigationBarColor(0xFFF7FAFE);
     }
     private Button button(String text,Runnable run) {
