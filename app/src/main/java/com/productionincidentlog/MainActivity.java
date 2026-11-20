@@ -560,9 +560,26 @@ public class MainActivity extends Activity {
     }
 
     private TextView settingItem(String title,Runnable action) {
-        TextView item=new TextView(this); item.setText("▣   "+title+"                                      ›"); item.setTextColor(ink);
-        item.setTextSize(15); item.setTypeface(null,Typeface.BOLD); item.setPadding(16,17,12,17); item.setBackground(rounded(0xFFFFFFFF,15)); item.setElevation(1);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,4,0,4);item.setLayoutParams(p);item.setOnClickListener(v->action.run());return item;
+        String icon="⚙";
+        if(title.contains("设备")) icon="▣";
+        else if(title.contains("班组")) icon="♟";
+        else if(title.contains("区域")) icon="◆";
+        else if(title.contains("备份") || title.contains("恢复")) icon="▤";
+        else if(title.contains("提醒") || title.contains("通知")) icon="●";
+        else if(title.contains("附件")) icon="▧";
+        TextView item=new TextView(this);
+        item.setText(icon+"    "+title+"    ›");
+        item.setTextColor(ink);
+        item.setTextSize(15);
+        item.setTypeface(null,Typeface.BOLD);
+        item.setPadding(16,17,12,17);
+        item.setBackground(rounded(0xFFFFFFFF,15));
+        item.setElevation(1);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
+        p.setMargins(0,4,0,4);
+        item.setLayoutParams(p);
+        item.setOnClickListener(v->action.run());
+        return item;
     }
     private void showCatalog(String title,String[] values) {
         new AlertDialog.Builder(this).setTitle(title).setItems(values,(dialog,which)->{}).setPositiveButton("关闭",null).show();
