@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class IncidentDb extends SQLiteOpenHelper {
-    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 4); }
+    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 5); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE equipment(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,active INTEGER NOT NULL DEFAULT 1)");
@@ -23,6 +23,7 @@ public class IncidentDb extends SQLiteOpenHelper {
         createCatalogTable(db);
         seedCatalog(db,"team","A班"); seedCatalog(db,"team","B班");
         seedCatalog(db,"area","造粒"); seedCatalog(db,"area","仓库");
+        seedCatalog(db,"type","设备损伤"); seedCatalog(db,"type","物料混料"); seedCatalog(db,"type","人员受伤");
     }
 
     private void seed(SQLiteDatabase db, String name) {
@@ -37,6 +38,7 @@ public class IncidentDb extends SQLiteOpenHelper {
             seedCatalog(db,"team","A班"); seedCatalog(db,"team","B班");
             seedCatalog(db,"area","造粒"); seedCatalog(db,"area","仓库");
         }
+        if(oldVersion<5) { seedCatalog(db,"type","设备损伤"); seedCatalog(db,"type","物料混料"); seedCatalog(db,"type","人员受伤"); }
     }
 
     private void createCatalogTable(SQLiteDatabase db) {
