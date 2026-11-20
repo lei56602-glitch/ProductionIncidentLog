@@ -902,7 +902,18 @@ public class MainActivity extends Activity {
                 Toast.makeText(this,"请检查日期格式及起止顺序（yyyy-MM-dd）",Toast.LENGTH_SHORT).show(); return;
             }
             List<String[]> rows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
-            result.addView(button("事故总数："+rows.size()+" 起（点击查看明细）",() -> showFilteredRecords("全部筛选事故",rows)));
+            TextView totalCard=new TextView(this);
+            totalCard.setText("本月事故总数\\n"+rows.size()+" 起   ·   点击查看明细");
+            totalCard.setTextColor(0xFF1556A8);
+            totalCard.setTextSize(18);
+            totalCard.setTypeface(null,Typeface.BOLD);
+            totalCard.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            totalCard.setPadding(18,18,18,18);
+            totalCard.setBackground(rounded(0xFFE5F0FF,18));
+            LinearLayout.LayoutParams totalLp=new LinearLayout.LayoutParams(-1,-2);
+            totalLp.setMargins(3,6,3,10);
+            result.addView(totalCard,totalLp);
+            totalCard.setOnClickListener(v->showFilteredRecords("全部筛选事故",rows));
             addStatisticGroup(result,"事故类型",rows,4,new String[]{"设备损伤","物料混料","人员受伤"});
             addStatisticGroup(result,"班组分布",rows,2,new String[]{"A班","B班"});
             addStatisticGroup(result,"区域分布",rows,3,new String[]{"造粒","仓库"});
