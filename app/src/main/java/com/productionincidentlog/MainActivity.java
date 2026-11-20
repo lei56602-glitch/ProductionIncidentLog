@@ -772,7 +772,7 @@ public class MainActivity extends Activity {
                 java.util.Collections.sort(ranked,(x,y)->y.getValue().compareTo(x.getValue()));
                 int size=Math.min(8,ranked.size()); String[] labels=new String[size]; int[] values=new int[size];
                 for(int i=0;i<size;i++){labels[i]=ranked.get(i).getKey();values[i]=ranked.get(i).getValue();}
-                result.addView(new IncidentBarChart(this,labels,values));
+                result.addView(new IncidentHorizontalBarChart(this,labels,values));
                 for(java.util.Map.Entry<String,Integer> e:ranked) {
                     String deviceName=e.getKey();
                     result.addView(button(deviceName+"："+e.getValue()+" 起",() -> showFilteredRecords("设备："+deviceName,filterRows(rows,5,deviceName))));
@@ -796,14 +796,29 @@ public class MainActivity extends Activity {
     private void addStatisticGroup(LinearLayout target,String heading,List<String[]> rows,int column,String[] categories) {
         target.addView(sectionTitle(heading+"（点击查看明细）"));
         int[] values=new int[categories.length];
+        int[] backgrounds={0xFFFFF0DF,0xFFE7F0FF,0xFFFFEDEF,0xFFE4F8EF};
         for(int i=0;i<categories.length;i++) {
             for(String[] r:rows) if(categories[i].equals(r[column])) values[i]++;
         }
-        if(column==2) target.addView(new IncidentBarChart(this,categories,values));
+        if(column==2) target.addView(new IncidentHorizontalBarChart(this,categories,values));
+        LinearLayout tiles=new LinearLayout(this);
+        tiles.setOrientation(LinearLayout.HORIZONTAL);
         for(int i=0;i<categories.length;i++) {
-            final String category=categories[i]; final int count=values[i];
-            target.addView(button(category+"："+count+" 起",() -> showFilteredRecords(heading+"："+category,filterRows(rows,column,category))));
+            final String category=categories[i];
+            TextView tile=new TextView(this);
+            tile.setText(category+"\\n"+values[i]+" 起");
+            tile.setGravity(android.view.Gravity.CENTER);
+            tile.setTextColor(ink);
+            tile.setTextSize(13);
+            tile.setTypeface(null,Typeface.BOLD);
+            tile.setPadding(4,12,4,12);
+            tile.setBackground(rounded(backgrounds[i%backgrounds.length],15));
+            tile.setOnClickListener(v->showFilteredRecords(heading+"："+category,filterRows(rows,column,category)));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
+            lp.setMargins(3,4,3,4);
+            tiles.addView(tile,lp);
         }
+        target.addView(tiles);
     }
 
     private List<String[]> filterRows(List<String[]> source,int column,String value) {
