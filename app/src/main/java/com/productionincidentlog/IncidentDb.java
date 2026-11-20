@@ -36,13 +36,13 @@ public class IncidentDb extends SQLiteOpenHelper {
         return getWritableDatabase().insertWithOnConflict("equipment", null, v, SQLiteDatabase.CONFLICT_IGNORE) != -1;
     }
     public String addIncident(String date, String team, String area, String type, String equipment,
-            String people, String description, String analysis, String cause, String action, String prevention) {
+            String people, String description, String analysis, String cause, String action, String prevention, String owner, String dueDate) {
         String code = "INC-" + System.currentTimeMillis();
         ContentValues v = new ContentValues();
         v.put("code", code); v.put("occurred_at", date); v.put("team", team); v.put("area", area);
         v.put("type", type); v.put("equipment", equipment); v.put("people", people);
         v.put("description", description); v.put("analysis", analysis); v.put("cause", cause);
-        v.put("immediate_action", action); v.put("prevention", prevention);
+        v.put("immediate_action", action); v.put("prevention", prevention); v.put("owner", owner); v.put("due_date", dueDate);
         v.put("created_at", String.valueOf(System.currentTimeMillis()));
         getWritableDatabase().insertOrThrow("incidents", null, v);
         return code;
@@ -56,11 +56,11 @@ public class IncidentDb extends SQLiteOpenHelper {
     public List<String[]> incidents(String keyword) {
         List<String[]> rows = new ArrayList<>();
         String q = "%" + keyword + "%";
-        String sql = "SELECT code,occurred_at,team,area,type,equipment,people,description,analysis,cause,immediate_action,prevention,status FROM incidents WHERE (?='' OR code LIKE ? OR equipment LIKE ? OR type LIKE ? OR description LIKE ?) ORDER BY occurred_at DESC,id DESC";
+        String sql = "SELECT code,occurred_at,team,area,type,equipment,people,description,analysis,cause,immediate_action,prevention,owner,due_date,status FROM incidents WHERE (?='' OR code LIKE ? OR equipment LIKE ? OR type LIKE ? OR description LIKE ?) ORDER BY occurred_at DESC,id DESC";
         try (Cursor c = getReadableDatabase().rawQuery(sql, new String[]{keyword,q,q,q,q})) {
             while (c.moveToNext()) {
-                String[] row = new String[13];
-                for (int i=0;i<13;i++) row[i] = c.isNull(i) ? "" : c.getString(i);
+                String[] row = new String[15];
+                for (int i=0;i<15;i++) row[i] = c.isNull(i) ? "" : c.getString(i);
                 rows.add(row);
             }
         }
@@ -82,5 +82,11 @@ public class IncidentDb extends SQLiteOpenHelper {
             }
         }
         return rows;
+    }
+
+    public void updateStatus(String code, String status) {
+        ContentValues values = new ContentValues();
+        values.put("status", status);
+        getWritableDatabase().update("incidents", values, "code=?", new String[]{code});
     }
 }
