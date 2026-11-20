@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         for(int i=0;i<labels.length;i++) {
             final int index=i;
             TextView item=new TextView(this);
-            item.setText(icons[i]+"\\n"+labels[i]);
+            item.setText(icons[i]+"\n"+labels[i]);
             item.setGravity(android.view.Gravity.CENTER);
             item.setTextSize(12);
             item.setTypeface(null,Typeface.BOLD);
@@ -387,7 +387,7 @@ public class MainActivity extends Activity {
         body.setPadding(10,16,10,12);
         body.addView(stepIndicator(3));
         TextView success=new TextView(this);
-        success.setText("✓\\n事故记录已成功保存");
+        success.setText("✓\n事故记录已成功保存");
         success.setGravity(android.view.Gravity.CENTER);
         success.setTextColor(0xFF16865B);
         success.setTextSize(21);
