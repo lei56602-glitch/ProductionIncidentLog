@@ -40,6 +40,15 @@ public class MainActivity extends Activity {
         t.setTextColor(ink); t.setPadding(18,18,18,18); t.setBackgroundColor(-1);
         return t;
     }
+    private boolean validDueDate(String value) {
+        if(value==null || value.trim().isEmpty()) return true;
+        try {
+            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+            format.setLenient(false);
+            return format.format(format.parse(value.trim())).equals(value.trim());
+        } catch(Exception e) { return false; }
+    }
+
     private void dashboard() {
         page("生产事故管理");
         TextView sub = new TextView(this); sub.setText("现场事故登记 · 整改跟踪 · 数据统计");
@@ -48,6 +57,12 @@ public class MainActivity extends Activity {
         counts.addView(card("事故总数", ""+db.countAll()), new LinearLayout.LayoutParams(0,-2,1));
         counts.addView(card("待整改", ""+db.countStatus("待整改")), new LinearLayout.LayoutParams(0,-2,1));
         root.addView(counts);
+        String today = new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+        List<String[]> overdue = db.incidentsDue(today,0,true);
+        List<String[]> upcoming = db.incidentsDue(today,7,false);
+        root.addView(card("逾期未完成整改",db.countOverdue(today)+" 起"));
+        if(!overdue.isEmpty()) root.addView(button("查看逾期事故（"+overdue.size()+"）",() -> showFilteredRecords("逾期未完成整改",overdue)));
+        if(!upcoming.isEmpty()) root.addView(button("未来 7 天到期（"+upcoming.size()+"）",() -> showFilteredRecords("未来 7 天到期整改",upcoming)));
         root.addView(card("设备损伤", db.countType("设备损伤")+" 起"));
         root.addView(card("物料混料", db.countType("物料混料")+" 起"));
         root.addView(card("人员受伤", db.countType("人员受伤")+" 起"));
@@ -103,6 +118,9 @@ public class MainActivity extends Activity {
                 || analysis.getText().toString().trim().isEmpty() || cause.getText().toString().trim().isEmpty()
                 || action.getText().toString().trim().isEmpty() || prevention.getText().toString().trim().isEmpty()) {
                 Toast.makeText(this,"请填写发生时间及五项事故内容",Toast.LENGTH_LONG).show(); return;
+            }
+            if(!validDueDate(dueDate.getText().toString())) {
+                Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show(); return;
             }
             String code = db.addIncident(date.getText().toString(),team.getSelectedItem().toString(),
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),
@@ -206,6 +224,9 @@ public class MainActivity extends Activity {
                 || cause.getText().toString().trim().isEmpty() || action.getText().toString().trim().isEmpty()
                 || prevention.getText().toString().trim().isEmpty()) {
                 Toast.makeText(this,"请填写发生时间及五项事故内容",Toast.LENGTH_LONG).show(); return;
+            }
+            if(!validDueDate(dueDate.getText().toString())) {
+                Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show(); return;
             }
             db.updateIncident(r[0],d,team.getSelectedItem().toString(),area.getSelectedItem().toString(),
                 type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),people.getText().toString(),
