@@ -25,6 +25,10 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); db = new IncidentDb(this); dashboard();
+        IncidentReminderScheduler.schedule(this);
+        if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},7304);
+        }
     }
     private void page(String title) {
         root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
