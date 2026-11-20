@@ -136,7 +136,7 @@ public class MainActivity extends Activity {
             item.addView(label);
             row.addView(item,new LinearLayout.LayoutParams(0,-2,1));
             if(i<2) {
-                View line=new View(this);
+                android.view.View line=new android.view.View(this);
                 line.setBackgroundColor(i+1<current?blue:0xFFD5DFEA);
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,2,1);
                 lp.setMargins(0,-18,0,0);
