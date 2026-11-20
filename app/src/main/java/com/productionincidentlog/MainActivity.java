@@ -378,7 +378,7 @@ public class MainActivity extends Activity {
     }
     private void incidentAnalysis(IncidentDraft draft) {
         page("新增事故记录 · 详细内容");
-        ScrollView scroll=new ScrollView(this); LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
+        ScrollView scroll=new ScrollView(this); LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(10,8,10,12); scroll.addView(form);
         form.addView(stepIndicator(2));
         TextView heading=sectionTitle("事故分析"); form.addView(heading);
         EditText description=field(form,"事故经过 *","请描述事故发生过程（不少于 50 字）",draft.description==null?"":draft.description,4);
@@ -643,7 +643,7 @@ public class MainActivity extends Activity {
 
     private void showIncidentDetail(String[] r) {
         page("事故详情");
-        ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(8,8,8,12); scroll.addView(body);
         LinearLayout identity=new LinearLayout(this);
         identity.setGravity(android.view.Gravity.CENTER_VERTICAL);
         identity.setPadding(12,10,12,10);
