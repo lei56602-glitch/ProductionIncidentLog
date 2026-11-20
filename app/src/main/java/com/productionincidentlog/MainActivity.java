@@ -308,6 +308,12 @@ public class MainActivity extends Activity {
         e.setPadding(14,10,14,10); e.setBackground(rounded(0xFFFFFFFF,15)); e.setElevation(1);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,5); box.addView(e,p); return e;
     }
+    private List<String> catalogChoices(String category,String current) {
+        List<String> values=db.catalogNames(category);
+        if(current!=null&&!current.trim().isEmpty()&&!values.contains(current)) values.add(0,current);
+        if(values.isEmpty()) values.add(category.equals("team")?"未设置班组":"未设置区域");
+        return values;
+    }
     private List<String> catalogFilter(String category,String allLabel) {
         List<String> values=new java.util.ArrayList<>();values.add(allLabel);values.addAll(db.catalogNames(category));return values;
     }
@@ -350,10 +356,12 @@ public class MainActivity extends Activity {
         form.addView(sectionTitle("基本信息"));
         String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
         EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",draft.date==null?now:draft.date,1);
-        Spinner team=spinner(form,"班组 *",db.catalogNames("team"));
-        if(draft.team!=null) team.setSelection(Math.max(0,java.util.Arrays.asList("A班","B班").indexOf(draft.team)));
-        Spinner area=spinner(form,"区域 *",db.catalogNames("area"));
-        if(draft.area!=null) area.setSelection(Math.max(0,java.util.Arrays.asList("造粒","仓库").indexOf(draft.area)));
+        List<String> teamValues=catalogChoices("team",draft.team);
+        Spinner team=spinner(form,"班组 *",teamValues);
+        if(draft.team!=null) team.setSelection(Math.max(0,teamValues.indexOf(draft.team)));
+        List<String> areaValues=catalogChoices("area",draft.area);
+        Spinner area=spinner(form,"区域 *",areaValues);
+        if(draft.area!=null) area.setSelection(Math.max(0,areaValues.indexOf(draft.area)));
         List<String> equipmentNames=db.equipmentNames(); if(equipmentNames.isEmpty()) equipmentNames.add("未指定");
         Spinner equipment=spinner(form,"设备名称",equipmentNames);
         if(draft.equipment!=null && equipmentNames.contains(draft.equipment)) equipment.setSelection(equipmentNames.indexOf(draft.equipment));
@@ -761,10 +769,12 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
         EditText date = field(form,"发生日期与时间","yyyy-MM-dd HH:mm",r[1],1);
-        Spinner team = spinner(form,"班组",java.util.Arrays.asList("A班","B班"));
-        team.setSelection(Math.max(0,java.util.Arrays.asList("A班","B班").indexOf(r[2])));
-        Spinner area = spinner(form,"发生区域",java.util.Arrays.asList("造粒","仓库"));
-        area.setSelection(Math.max(0,java.util.Arrays.asList("造粒","仓库").indexOf(r[3])));
+        List<String> teamValues=catalogChoices("team",r[2]);
+        Spinner team = spinner(form,"班组",teamValues);
+        team.setSelection(Math.max(0,teamValues.indexOf(r[2])));
+        List<String> areaValues=catalogChoices("area",r[3]);
+        Spinner area = spinner(form,"发生区域",areaValues);
+        area.setSelection(Math.max(0,areaValues.indexOf(r[3])));
         Spinner type = spinner(form,"事故类型",java.util.Arrays.asList("设备损伤","物料混料","人员受伤"));
         type.setSelection(Math.max(0,java.util.Arrays.asList("设备损伤","物料混料","人员受伤").indexOf(r[4])));
         List<String> equipmentNames = db.equipmentNames();
@@ -1005,8 +1015,8 @@ public class MainActivity extends Activity {
         }
         body.addView(ranges);
         body.addView(sectionTitle("筛选条件"));
-        Spinner team=spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
-        Spinner area=spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner team=spinner(body,"班组",catalogFilter("team","全部班组"));
+        Spinner area=spinner(body,"区域",catalogFilter("area","全部区域"));
         Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         List<String> equipmentOptions=new java.util.ArrayList<>(); equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
         Spinner equipment=spinner(body,"设备",equipmentOptions);
@@ -1147,8 +1157,8 @@ public class MainActivity extends Activity {
             });
         }
         reportBody.addView(ranges);
-        Spinner team = spinner(reportBody,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
-        Spinner area = spinner(reportBody,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner team = spinner(reportBody,"班组",catalogFilter("team","全部班组"));
+        Spinner area = spinner(reportBody,"区域",catalogFilter("area","全部区域"));
         Spinner type = spinner(reportBody,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         List<String> equipmentOptions = new java.util.ArrayList<>();
         equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
