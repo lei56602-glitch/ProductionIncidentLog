@@ -69,15 +69,15 @@ public class IncidentDb extends SQLiteOpenHelper {
 
     public List<String[]> incidentsFiltered(String from, String to, String team, String area, String type, String equipment) {
         List<String[]> rows = new ArrayList<>();
-        String sql = "SELECT code,occurred_at,team,area,type,equipment,people,description,analysis,cause,immediate_action,prevention,status FROM incidents " +
+        String sql = "SELECT code,occurred_at,team,area,type,equipment,people,description,analysis,cause,immediate_action,prevention,owner,due_date,status FROM incidents " +
             "WHERE (?='' OR substr(occurred_at,1,10)>=?) AND (?='' OR substr(occurred_at,1,10)<=?) " +
             "AND (?='全部班组' OR team=?) AND (?='全部区域' OR area=?) " +
             "AND (?='全部类型' OR type=?) AND (?='全部设备' OR equipment=?) ORDER BY occurred_at DESC,id DESC";
         String[] args = {from,from,to,to,team,team,area,area,type,type,equipment,equipment};
         try (Cursor c = getReadableDatabase().rawQuery(sql,args)) {
             while (c.moveToNext()) {
-                String[] row = new String[13];
-                for (int i=0;i<13;i++) row[i] = c.isNull(i) ? "" : c.getString(i);
+                String[] row = new String[15];
+                for (int i=0;i<15;i++) row[i] = c.isNull(i) ? "" : c.getString(i);
                 rows.add(row);
             }
         }

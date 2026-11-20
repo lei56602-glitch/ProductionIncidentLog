@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
         root.addView(button("事故档案", this::records));
         root.addView(button("设备档案管理", this::equipment));
         root.addView(button("统计概览", this::statistics));
+        root.addView(button("事故报表中心（Excel / PDF）", this::exportCenter));
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
@@ -197,5 +198,56 @@ public class MainActivity extends Activity {
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("返回首页",this::dashboard));
     }
+
+    private void exportCenter() {
+        page("事故报表中心");
+        TextView tip = new TextView(this);
+        tip.setText("按发生日期筛选事故。Excel 文件包含事故汇总、详细记录、统计分析三个工作表；PDF 用于查看和打印。");
+        tip.setTextColor(ink); tip.setTextSize(15); root.addView(tip);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        String monthStart = today.substring(0,8) + "01";
+        EditText from = field(root,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
+        EditText to = field(root,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); root.addView(count);
+        final List<String[]>[] selected = new List[]{new java.util.ArrayList<String[]>()};
+        Runnable load = () -> {
+            String f=from.getText().toString().trim(), t=to.getText().toString().trim();
+            if ((!f.isEmpty() && !f.matches("\\d{4}-\\d{2}-\\d{2}")) ||
+                (!t.isEmpty() && !t.matches("\\d{4}-\\d{2}-\\d{2}"))) {
+                Toast.makeText(this,"日期格式请使用 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
+            }
+            if (!f.isEmpty() && !t.isEmpty() && f.compareTo(t)>0) {
+                Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
+            }
+            selected[0]=db.incidentsFiltered(f,t,"全部班组","全部区域","全部类型","全部设备");
+            count.setText("当前符合条件："+selected[0].size()+" 起事故");
+        };
+        root.addView(button("查询报表范围",load));
+        root.addView(button("导出 Excel（三个工作表）",() -> {
+            load.run();
+            try {
+                java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
+                shareExport(file,"application/vnd.ms-excel");
+            } catch(Exception e) { Toast.makeText(this,"Excel 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
+        }));
+        root.addView(button("生成 PDF 事故报告",() -> {
+            load.run();
+            try {
+                java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
+                shareExport(file,"application/pdf");
+            } catch(Exception e) { Toast.makeText(this,"PDF 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
+        }));
+        root.addView(button("返回首页",this::dashboard));
+    }
+
+    private void shareExport(java.io.File file, String mime) {
+        android.net.Uri uri=androidx.core.content.FileProvider.getUriForFile(this,
+            getPackageName()+".fileprovider",file);
+        android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_SEND);
+        intent.setType(mime); intent.putExtra(android.content.Intent.EXTRA_STREAM,uri);
+        intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(android.content.Intent.createChooser(intent,"分享或保存报表"));
+    }
+
     @Override protected void onDestroy() { if (db!=null) db.close(); super.onDestroy(); }
 }
