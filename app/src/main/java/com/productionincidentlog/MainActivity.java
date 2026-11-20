@@ -71,11 +71,33 @@ public class MainActivity extends Activity {
             nav.addView(item,new LinearLayout.LayoutParams(0,-2,1)); item.setOnClickListener(v->actions[index].run()); }
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,8,0,0); root.addView(nav,lp);
     }
+    private class IndustrialHero extends TextView {
+        private final android.graphics.Paint paint=new android.graphics.Paint(3);
+        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\\n记录事故 · 分析原因 · 闭环整改");setTextColor(0xFFFFFFFF);setTextSize(21);
+            setTypeface(null,Typeface.BOLD);setPadding(20,28,20,28);setMinHeight(180);}
+        @Override protected void onDraw(android.graphics.Canvas canvas){
+            float w=getWidth(),h=getHeight();
+            paint.setShader(new android.graphics.LinearGradient(0,0,w,h,0xFF0B58B8,0xFF258DEB,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(0,0,w,h,24,24,paint);paint.setShader(null);
+            paint.setColor(0x553BBAFF);paint.setStyle(android.graphics.Paint.Style.FILL);
+            float x=w*0.60f;
+            canvas.drawRect(x+18,h*0.30f,x+48,h*0.92f,paint);
+            canvas.drawRect(x+62,h*0.18f,x+91,h*0.92f,paint);
+            canvas.drawRect(x+108,h*0.38f,x+139,h*0.92f,paint);
+            canvas.drawRect(x+154,h*0.24f,x+181,h*0.92f,paint);
+            paint.setColor(0x88D8F1FF);paint.setStrokeWidth(4);paint.setStyle(android.graphics.Paint.Style.STROKE);
+            canvas.drawLine(x+32,h*0.30f,x+32,h*0.12f,paint);canvas.drawLine(x+76,h*0.18f,x+76,h*0.06f,paint);
+            canvas.drawLine(x+122,h*0.38f,x+122,h*0.20f,paint);canvas.drawLine(x+167,h*0.24f,x+167,h*0.10f,paint);
+            canvas.drawLine(x+5,h*0.57f,x+190,h*0.57f,paint);canvas.drawLine(x+5,h*0.72f,x+190,h*0.72f,paint);
+            paint.setStyle(android.graphics.Paint.Style.FILL);paint.setColor(0x44FFFFFF);
+            canvas.drawCircle(x+32,h*0.30f,7,paint);canvas.drawCircle(x+76,h*0.18f,7,paint);canvas.drawCircle(x+122,h*0.38f,7,paint);
+            super.onDraw(canvas);
+        }
+    }
     private void dashboard() {
         page("生产事故管理系统");
         ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
-        TextView hero=new TextView(this); hero.setText("生产事故管理系统\\n记录事故 · 分析原因 · 闭环整改"); hero.setTextColor(0xFFFFFFFF);
-        hero.setTextSize(22); hero.setTypeface(null,Typeface.BOLD); hero.setPadding(22,34,22,34); hero.setBackground(rounded(0xFF145FC4,24)); hero.setElevation(3); body.addView(hero);
+        IndustrialHero hero=new IndustrialHero(this); hero.setElevation(3); body.addView(hero);
         body.addView(sectionTitle("快速登记"));
         LinearLayout quick=new LinearLayout(this); quick.setOrientation(LinearLayout.HORIZONTAL); String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
         for(int i=0;i<types.length;i++){ final String chosen=types[i]; TextView tile=new TextView(this); tile.setText(types[i]+"\\n记录"); tile.setGravity(android.view.Gravity.CENTER);
