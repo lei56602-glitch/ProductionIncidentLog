@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
         EditText cause = field(form,"三、事故原因","填写直接原因和根本原因","",3);
         EditText action = field(form,"四、当下采取措施","现场处置和临时控制措施","",3);
         EditText prevention = field(form,"五、未来如何避免","长期整改和预防措施","",3);
+        EditText owner = field(form,"整改负责人","负责推动整改的人","",1);
+        EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("保存事故档案", () -> {
             if (date.getText().toString().trim().isEmpty() || description.getText().toString().trim().isEmpty()
@@ -91,7 +93,7 @@ public class MainActivity extends Activity {
             String code = db.addIncident(date.getText().toString(),team.getSelectedItem().toString(),
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),
                 people.getText().toString(),description.getText().toString(),analysis.getText().toString(),
-                cause.getText().toString(),action.getText().toString(),prevention.getText().toString());
+                cause.getText().toString(),action.getText().toString(),prevention.getText().toString(),owner.getText().toString(),dueDate.getText().toString());
             Toast.makeText(this,"保存成功："+code,Toast.LENGTH_LONG).show(); dashboard();
         }));
         root.addView(button("返回首页",this::dashboard));
@@ -109,10 +111,20 @@ public class MainActivity extends Activity {
                 list.addView(button("查看事故详情", () -> {
                     String detail = r[0]+"\n时间："+r[1]+"\n班组："+r[2]+"\n区域："+r[3]+"\n类型："+r[4]+"\n设备："+r[5]+"\n涉事人员："+r[6]
                         +"\n\n事故经过："+r[7]+"\n\n事故分析："+r[8]+"\n\n事故原因："+r[9]
-                        +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n状态："+r[12];
+                        +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n整改负责人："+r[12]+"\n整改期限："+r[13]+"\n整改状态："+r[14];
                     TextView detailView = new TextView(this); detailView.setText(detail); detailView.setTextSize(16); detailView.setPadding(24,20,24,20);
                     ScrollView sv = new ScrollView(this); sv.addView(detailView);
-                    new AlertDialog.Builder(this).setTitle(r[0]).setView(sv).setPositiveButton("关闭",null).show();
+                    new AlertDialog.Builder(this).setTitle(r[0]).setView(sv)
+                        .setPositiveButton("关闭",null)
+                        .setNeutralButton("更新整改状态",(dialog,which) -> {
+                            String[] states={"待整改","整改中","已完成"};
+                            new AlertDialog.Builder(this).setTitle("选择整改状态")
+                                .setItems(states,(d2,index) -> {
+                                    db.updateStatus(r[0],states[index]);
+                                    Toast.makeText(this,"整改状态已更新",Toast.LENGTH_SHORT).show();
+                                    records();
+                                }).show();
+                        }).show();
                 }));
             }
             if (rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
