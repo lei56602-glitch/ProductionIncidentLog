@@ -61,6 +61,28 @@ public class IncidentDb extends SQLiteOpenHelper {
         database.insert("incident_status_history",null,initialEvent);
         return code;
     }
+    public int countOverdue(String today) {
+        return scalar("SELECT COUNT(*) FROM incidents WHERE due_date IS NOT NULL AND due_date<>'' AND due_date<? AND status<>'已完成'", new String[]{today});
+    }
+    public List<String[]> incidentsDue(String today, int daysAhead, boolean overdueOnly) {
+        List<String[]> rows = new ArrayList<>();
+        String end = new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(
+            new Date(System.currentTimeMillis() + Math.max(0,daysAhead) * 86400000L));
+        String sql = "SELECT code,occurred_at,team,area,type,equipment,people,description,analysis,cause,immediate_action,prevention,owner,due_date,status " +
+            "FROM incidents WHERE due_date IS NOT NULL AND due_date<>'' AND status<>'已完成' " +
+            (overdueOnly ? "AND due_date<? " : "AND due_date>=? AND due_date<=? ") +
+            "ORDER BY due_date ASC,occurred_at DESC";
+        String[] args = overdueOnly ? new String[]{today} : new String[]{today,end};
+        try (Cursor c = getReadableDatabase().rawQuery(sql,args)) {
+            while(c.moveToNext()) {
+                String[] row = new String[15];
+                for(int i=0;i<15;i++) row[i]=c.isNull(i)?"":c.getString(i);
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
     public int countAll() { return scalar("SELECT COUNT(*) FROM incidents", null); }
     public int countType(String type) { return scalar("SELECT COUNT(*) FROM incidents WHERE type=?", new String[]{type}); }
     public int countStatus(String status) { return scalar("SELECT COUNT(*) FROM incidents WHERE status=?", new String[]{status}); }
