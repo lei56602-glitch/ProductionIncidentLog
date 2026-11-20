@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,5,0,5); b.setLayoutParams(lp); b.setOnClickListener(v->run.run()); return b;
     }
     private TextView card(String title,String value) {
-        TextView t=new TextView(this); t.setText(title+"\\n"+value); t.setTextSize(16); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD);
+        TextView t=new TextView(this); t.setText(title+"\n"+value); t.setTextSize(16); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD);
         t.setPadding(16,16,16,16); t.setBackground(rounded(0xFFFFFFFF,22)); t.setElevation(2); return t;
     }
     private void addBottomNav(String selected) {
@@ -148,7 +148,7 @@ public class MainActivity extends Activity {
     }
     private class IndustrialHero extends TextView {
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\\n记录事故 · 分析原因 · 闭环整改");setTextColor(0xFFFFFFFF);setTextSize(21);
+        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\n记录事故 · 分析原因 · 闭环整改");setTextColor(0xFFFFFFFF);setTextSize(21);
             setTypeface(null,Typeface.BOLD);setPadding(20,28,20,28);setMinHeight(180);}
         @Override protected void onDraw(android.graphics.Canvas canvas){
             float w=getWidth(),h=getHeight();
@@ -171,7 +171,7 @@ public class MainActivity extends Activity {
     }
     private TextView dashboardMetric(String icon,String label,int count,int background) {
         TextView tile=new TextView(this);
-        tile.setText(icon+"\\n"+label+"\\n"+count+" 起");
+        tile.setText(icon+"\n"+label+"\n"+count+" 起");
         tile.setGravity(android.view.Gravity.CENTER);
         tile.setTextColor(ink); tile.setTextSize(14); tile.setTypeface(null,Typeface.BOLD);
         tile.setPadding(5,13,5,13); tile.setBackground(rounded(background,16));
@@ -229,7 +229,7 @@ public class MainActivity extends Activity {
         LinearLayout overviewBottom=new LinearLayout(this);
         overviewBottom.setOrientation(LinearLayout.HORIZONTAL);
         TextView totalTile=new TextView(this);
-        totalTile.setText("▤\\n事故总数\\n"+monthly.size()+" 起");
+        totalTile.setText("▤\n事故总数\n"+monthly.size()+" 起");
         totalTile.setGravity(android.view.Gravity.CENTER);
         totalTile.setTextColor(0xFF125FC4); totalTile.setTextSize(15);
         totalTile.setTypeface(null,Typeface.BOLD); totalTile.setPadding(5,13,5,13);
@@ -311,7 +311,7 @@ public class MainActivity extends Activity {
         String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
         final int[] selectedType={presetType==null?0:Math.max(0,java.util.Arrays.asList(types).indexOf(presetType))};
         TextView[] typeTiles=new TextView[3];
-        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(types[i]+"\\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
+        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(types[i]+"\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
             typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15);
             android.graphics.drawable.GradientDrawable tileBg=rounded(colors[i],16);
             tileBg.setStroke(i==selectedType[0]?3:1,i==selectedType[0]?blue:0xFFDCE5F0);
@@ -374,7 +374,7 @@ public class MainActivity extends Activity {
             }
             if(!validDueDate(dueDate.getText().toString())){Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show();return;}
             new AlertDialog.Builder(this).setTitle("确认提交事故")
-                .setMessage("类型："+draft.type+"\\n时间："+draft.date+"\\n班组："+draft.team+" · "+draft.area+"\\n设备："+draft.equipment+"\\n附件："+draft.attachments.size()+" 个")
+                .setMessage("类型："+draft.type+"\n时间："+draft.date+"\n班组："+draft.team+" · "+draft.area+"\n设备："+draft.equipment+"\n附件："+draft.attachments.size()+" 个")
                 .setNegativeButton("继续修改",null).setPositiveButton("确认提交",(dialog,which)->{
                     String code=db.addIncident(draft.date,draft.team,draft.area,draft.type,draft.equipment,draft.people,
                         description.getText().toString().trim(),analysis.getText().toString().trim(),cause.getText().toString().trim(),
@@ -586,7 +586,7 @@ public class MainActivity extends Activity {
                     LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(imageView,mp);
                     imageView.setOnClickListener(v->showAttachments(r[0]));
                 } else {
-                    TextView video=new TextView(this);video.setText("▶\\n视频");video.setGravity(android.view.Gravity.CENTER);video.setTextColor(blue);video.setBackground(rounded(0xFFE7F0FF,16));
+                    TextView video=new TextView(this);video.setText("▶\n视频");video.setGravity(android.view.Gravity.CENTER);video.setTextColor(blue);video.setBackground(rounded(0xFFE7F0FF,16));
                     LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(video,mp);video.setOnClickListener(v->showAttachments(r[0]));
                 }
             }
@@ -702,7 +702,7 @@ public class MainActivity extends Activity {
         body.addView(settingItem("照片 / 视频附件完整性",this::checkAttachmentIntegrity));
         body.addView(sectionTitle("系统设置"));
         body.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
-            .setMessage("版本：1.0.0\\n数据存储：本机 SQLite\\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
+            .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("我的");
     }
@@ -806,7 +806,7 @@ public class MainActivity extends Activity {
         for(int i=0;i<categories.length;i++) {
             final String category=categories[i];
             TextView tile=new TextView(this);
-            tile.setText(category+"\\n"+values[i]+" 起");
+            tile.setText(category+"\n"+values[i]+" 起");
             tile.setGravity(android.view.Gravity.CENTER);
             tile.setTextColor(ink);
             tile.setTextSize(13);
