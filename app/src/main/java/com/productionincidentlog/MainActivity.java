@@ -231,51 +231,95 @@ public class MainActivity extends Activity {
     }
     private void statistics() {
         page("多条件事故统计");
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(body);
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-        String monthStart = today.substring(0,8) + "01";
-        EditText from = field(body,"开始日期（yyyy-MM-dd）","2026-11-01",monthStart,1);
-        EditText to = field(body,"结束日期（yyyy-MM-dd）","2026-11-30",today,1);
-        Spinner team = spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
-        Spinner area = spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
-        Spinner type = spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
-        List<String> equipmentOptions = new java.util.ArrayList<>();
-        equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
-        Spinner equipment = spinner(body,"设备",equipmentOptions);
-        LinearLayout result = new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL);
-        Runnable calculate = () -> {
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(new Date());
+        EditText from=field(body,"开始日期（yyyy-MM-dd）","留空表示不限",today.substring(0,8)+"01",1);
+        EditText to=field(body,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        Spinner team=spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
+        Spinner area=spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        List<String> equipmentOptions=new java.util.ArrayList<>(); equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
+        Spinner equipment=spinner(body,"设备",equipmentOptions);
+        LinearLayout result=new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL);
+        Runnable calculate=() -> {
             result.removeAllViews();
-            String startDate=from.getText().toString().trim(), endDate=to.getText().toString().trim();
-            if ((!startDate.isEmpty() && !startDate.matches("\\d{4}-\\d{2}-\\d{2}")) ||
-                (!endDate.isEmpty() && !endDate.matches("\\d{4}-\\d{2}-\\d{2}"))) {
-                Toast.makeText(this,"日期格式请使用 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
+            String f=from.getText().toString().trim(),t=to.getText().toString().trim();
+            if((!f.isEmpty()&&!f.matches("\\d{4}-\\d{2}-\\d{2}"))||(!t.isEmpty()&&!t.matches("\\d{4}-\\d{2}-\\d{2}"))||(!f.isEmpty()&&!t.isEmpty()&&f.compareTo(t)>0)) {
+                Toast.makeText(this,"请检查日期格式及起止顺序（yyyy-MM-dd）",Toast.LENGTH_SHORT).show(); return;
             }
-            List<String[]> rows=db.incidentsFiltered(startDate,endDate,team.getSelectedItem().toString(),
-                area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
-            result.addView(card("筛选结果",rows.size()+" 起事故"));
-            for(String t:new String[]{"设备损伤","物料混料","人员受伤"}) {
-                int n=0; for(String[] r:rows) if(t.equals(r[4])) n++;
-                result.addView(card(t,n+" 起"));
+            List<String[]> rows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
+            result.addView(button("事故总数："+rows.size()+" 起（点击查看明细）",() -> showFilteredRecords("全部筛选事故",rows)));
+            addStatisticGroup(result,"事故类型",rows,4,new String[]{"设备损伤","物料混料","人员受伤"});
+            addStatisticGroup(result,"班组分布",rows,2,new String[]{"A班","B班"});
+            addStatisticGroup(result,"区域分布",rows,3,new String[]{"造粒","仓库"});
+            java.util.Map<String,Integer> devices=new java.util.TreeMap<>();
+            java.util.Map<String,Integer> months=new java.util.TreeMap<>();
+            for(String[] r:rows) {
+                devices.put(r[5],devices.containsKey(r[5])?devices.get(r[5])+1:1);
+                String d=r[1]==null?"":r[1]; String m=d.length()>=7?d.substring(0,7):"日期未知";
+                months.put(m,months.containsKey(m)?months.get(m)+1:1);
             }
-            for(String t:new String[]{"A班","B班"}) {
-                int n=0; for(String[] r:rows) if(t.equals(r[2])) n++;
-                result.addView(card(t,n+" 起"));
+            result.addView(sectionTitle("设备事故排行（点击查看明细）"));
+            if(devices.isEmpty()) result.addView(card("设备排行","暂无记录"));
+            else {
+                java.util.List<java.util.Map.Entry<String,Integer>> ranked=new java.util.ArrayList<>(devices.entrySet());
+                java.util.Collections.sort(ranked,(x,y)->y.getValue().compareTo(x.getValue()));
+                int size=Math.min(8,ranked.size()); String[] labels=new String[size]; int[] values=new int[size];
+                for(int i=0;i<size;i++){labels[i]=ranked.get(i).getKey();values[i]=ranked.get(i).getValue();}
+                result.addView(new IncidentBarChart(this,labels,values));
+                for(java.util.Map.Entry<String,Integer> e:ranked) {
+                    String deviceName=e.getKey();
+                    result.addView(button(deviceName+"："+e.getValue()+" 起",() -> showFilteredRecords("设备："+deviceName,filterRows(rows,5,deviceName))));
+                }
             }
-            for(String t:new String[]{"造粒","仓库"}) {
-                int n=0; for(String[] r:rows) if(t.equals(r[3])) n++;
-                result.addView(card(t,n+" 起"));
+            result.addView(sectionTitle("事故发生趋势（月度）"));
+            if(months.isEmpty()) result.addView(card("事故趋势","暂无记录"));
+            else {
+                int offset=Math.max(0,months.size()-12),index=0,k=0;
+                String[] labels=new String[Math.min(12,months.size())]; int[] values=new int[labels.length];
+                for(java.util.Map.Entry<String,Integer> e:months.entrySet()) {
+                    if(index++<offset) continue; labels[k]=e.getKey(); values[k]=e.getValue(); k++;
+                }
+                result.addView(new IncidentBarChart(this,labels,values));
             }
-            java.util.Map<String,Integer> ranking=new java.util.TreeMap<>();
-            for(String[] r:rows) ranking.put(r[5],ranking.containsKey(r[5])?ranking.get(r[5])+1:1);
-            result.addView(card("设备事故分布",ranking.isEmpty()?"暂无记录":ranking.toString()));
         };
-        body.addView(button("应用筛选并统计",calculate));
-        body.addView(result);
-        calculate.run();
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        root.addView(button("返回首页",this::dashboard));
+        body.addView(button("应用筛选并统计",calculate)); body.addView(result); calculate.run();
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); root.addView(button("返回首页",this::dashboard));
+    }
+
+    private TextView sectionTitle(String title) {
+        TextView t=new TextView(this); t.setText(title); t.setTextColor(ink); t.setTextSize(18);
+        t.setTypeface(null,Typeface.BOLD); t.setPadding(4,18,4,8); return t;
+    }
+    private void addStatisticGroup(LinearLayout target,String heading,List<String[]> rows,int column,String[] categories) {
+        target.addView(sectionTitle(heading+"（点击查看明细）"));
+        for(String category:categories) {
+            int count=0; for(String[] r:rows) if(category.equals(r[column])) count++;
+            target.addView(button(category+"："+count+" 起",() -> showFilteredRecords(heading+"："+category,filterRows(rows,column,category))));
+        }
+    }
+    private List<String[]> filterRows(List<String[]> source,int column,String value) {
+        List<String[]> out=new java.util.ArrayList<>();
+        for(String[] r:source) if(value.equals(r[column])) out.add(r);
+        return out;
+    }
+    private void showFilteredRecords(String title,List<String[]> rows) {
+        page(title+" · "+rows.size()+" 起");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); scroll.addView(list);
+        for(String[] r:rows) {
+            list.addView(card(r[0]+" · "+r[4],r[1]+"\n"+r[2]+" / "+r[3]+" / "+r[5]+"\n"+r[7]));
+            list.addView(button("查看事故详情",() -> {
+                String detail=r[0]+"\n时间："+r[1]+"\n班组："+r[2]+"\n区域："+r[3]+"\n类型："+r[4]+"\n设备："+r[5]
+                    +"\n涉事人员："+r[6]+"\n\n事故经过："+r[7]+"\n\n事故分析："+r[8]+"\n\n事故原因："+r[9]
+                    +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n整改负责人："+r[12]+"\n整改期限："+r[13]+"\n整改状态："+r[14];
+                new AlertDialog.Builder(this).setTitle(r[0]).setMessage(detail).setPositiveButton("关闭",null)
+                    .setNegativeButton("查看附件（"+db.attachments(r[0]).size()+"）",(d,w)->showAttachments(r[0])).show();
+            }));
+        }
+        if(rows.isEmpty()) list.addView(card("暂无明细","当前分类没有事故记录"));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); root.addView(button("返回统计",this::statistics));
     }
 
     private void exportCenter() {
