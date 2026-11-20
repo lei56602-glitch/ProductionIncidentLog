@@ -94,6 +94,14 @@ public class MainActivity extends Activity {
         body.addView(sectionTitle("常用功能")); body.addView(button("＋ 登记新事故",this::incidentForm)); body.addView(button("事故档案",this::records)); body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("首页");
     }
+    private boolean validDueDate(String value) {
+        if(value==null || value.trim().isEmpty()) return true;
+        try {
+            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+            format.setLenient(false);
+            return format.format(format.parse(value.trim())).equals(value.trim());
+        } catch(Exception e) { return false; }
+    }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
         EditText e = new EditText(this); e.setHint(hint); e.setText(initial); e.setMinLines(lines);
