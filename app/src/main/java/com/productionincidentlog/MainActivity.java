@@ -787,7 +787,7 @@ public class MainActivity extends Activity {
         reminderRow.setPadding(15,10,12,10);
         reminderRow.setBackground(rounded(0xFFFFFFFF,16));
         TextView reminderText=new TextView(this);
-        reminderText.setText("整改期限通知\\n每天检查逾期及未来 7 天到期任务");
+        reminderText.setText("整改期限通知\n每天检查逾期及未来 7 天到期任务");
         reminderText.setTextColor(ink);reminderText.setTextSize(14);reminderText.setTypeface(null,Typeface.BOLD);
         reminderRow.addView(reminderText,new LinearLayout.LayoutParams(0,-2,1));
         Switch reminderSwitch=new Switch(this);
