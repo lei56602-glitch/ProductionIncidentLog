@@ -435,34 +435,36 @@ public class MainActivity extends Activity {
         form.addView(stepIndicator(1));
         TextView typeLabel=sectionTitle("事故类型");
         form.addView(typeLabel);
-        LinearLayout typeRow=new LinearLayout(this); typeRow.setOrientation(LinearLayout.HORIZONTAL);
-        String[] types={"设备损伤","物料混料","人员受伤"};
-        String[] typeIcons={"🔧","📦","✚"};
-        int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
-        final int[] selectedType={presetType==null?0:Math.max(0,java.util.Arrays.asList(types).indexOf(presetType))};
-        TextView[] typeTiles=new TextView[3];
-        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(typeIcons[i]+"\n"+types[i]+"\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
-            typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15);
-            android.graphics.drawable.GradientDrawable tileBg=rounded(colors[i],16);
-            tileBg.setStroke(i==selectedType[0]?3:1,i==selectedType[0]?blue:0xFFDCE5F0);
-            typeTiles[i].setBackground(tileBg);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); typeRow.addView(typeTiles[i],p);
-            typeTiles[i].setOnClickListener(v->{selectedType[0]=index; for(int j=0;j<3;j++){typeTiles[j].setAlpha(1f);android.graphics.drawable.GradientDrawable bg=rounded(colors[j],16);bg.setStroke(j==index?3:1,j==index?blue:0xFFDCE5F0);typeTiles[j].setBackground(bg);}});
-            typeTiles[i].setAlpha(i==selectedType[0]?1f:0.55f);
+        List<String> types=catalogChoices("type",draft.type);
+        LinearLayout typeOptions=new LinearLayout(this); typeOptions.setOrientation(LinearLayout.VERTICAL);
+        final String[] selectedType={presetType!=null?presetType:(draft.type!=null?draft.type:(types.isEmpty()?"":types.get(0)))};
+        java.util.List<CheckBox> typeChecks=new java.util.ArrayList<>();
+        for(String typeName:types) {
+            CheckBox check=new CheckBox(this); check.setText(typeName); check.setTextSize(15); check.setTextColor(ink);
+            check.setMinHeight(dp(48)); check.setPadding(dp(10),dp(5),dp(10),dp(5)); check.setChecked(typeName.equals(selectedType[0]));
+            check.setOnCheckedChangeListener((buttonView,checked)->{ if(checked){selectedType[0]=typeName; for(CheckBox other:typeChecks) if(other!=check) other.setChecked(false);} });
+            typeChecks.add(check); typeOptions.addView(check);
         }
-        form.addView(typeRow);
+        form.addView(typeOptions);
+        form.addView(button("＋ 自定义事故类型",()->showCatalog("事故类型管理","type")));
         form.addView(sectionTitle("基本信息"));
         String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
         EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",draft.date==null?now:draft.date,1);
         List<String> teamValues=catalogChoices("team",draft.team);
         Spinner team=spinner(form,"班组 *",teamValues);
         if(draft.team!=null) team.setSelection(Math.max(0,teamValues.indexOf(draft.team)));
-        List<String> areaValues=catalogChoices("area",draft.area);
-        Spinner area=spinner(form,"区域 *",areaValues);
-        if(draft.area!=null) area.setSelection(Math.max(0,areaValues.indexOf(draft.area)));
-        List<String> equipmentNames=db.equipmentNames(); if(equipmentNames.isEmpty()) equipmentNames.add("未指定");
-        Spinner equipment=spinner(form,"设备名称",equipmentNames);
-        if(draft.equipment!=null && equipmentNames.contains(draft.equipment)) equipment.setSelection(equipmentNames.indexOf(draft.equipment));
+        EditText area=field(form,"区域 *（可自定义）","输入或填写新的生产区域",draft.area==null?"":draft.area,1);
+        form.addView(button("＋ 保存当前区域到选项",()->{
+            String value=area.getText().toString().trim();
+            if(db.addCatalogValue("area",value)) Toast.makeText(this,"区域选项已保存",Toast.LENGTH_SHORT).show();
+            else Toast.makeText(this,"区域名称不能为空",Toast.LENGTH_SHORT).show();
+        }));
+        EditText equipment=field(form,"设备名称（可自定义）","输入设备名称，例如：滚筒、除湿机",draft.equipment==null?"":draft.equipment,1);
+        form.addView(button("＋ 保存当前设备到选项",()->{
+            String value=equipment.getText().toString().trim();
+            if(db.addEquipment(value)) Toast.makeText(this,"设备名称已保存",Toast.LENGTH_SHORT).show();
+            else Toast.makeText(this,"设备名称不能为空或已存在",Toast.LENGTH_SHORT).show();
+        }));
         EditText people=field(form,"涉事人员","人员姓名或工号",draft.people==null?"":draft.people,1);
         attachmentHint=new TextView(this); attachmentHint.setText("📷 现场照片 / 视频    已选择 "+pendingAttachments.size()+" 个"); attachmentHint.setTextColor(ink); attachmentHint.setTextSize(14); attachmentHint.setTypeface(null,Typeface.BOLD); attachmentHint.setPadding(4,10,4,5); form.addView(attachmentHint);
         attachmentPreview=new LinearLayout(this); attachmentPreview.setOrientation(LinearLayout.HORIZONTAL);
@@ -480,8 +482,11 @@ public class MainActivity extends Activity {
         addAdaptiveScroll(scroll);
         root.addView(button("下一步：事故分析",()->{
             if(!validIncidentDate(date.getText().toString())){Toast.makeText(this,"发生时间格式错误，请使用 yyyy-MM-dd HH:mm",Toast.LENGTH_SHORT).show();return;}
-            draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
-            draft.type=types[selectedType[0]]; draft.equipment=equipment.getSelectedItem().toString(); draft.people=people.getText().toString().trim();
+            draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getText().toString().trim();
+            if(draft.area.isEmpty()){Toast.makeText(this,"请填写事故区域",Toast.LENGTH_SHORT).show();return;}
+            if(selectedType[0]==null||selectedType[0].trim().isEmpty()){Toast.makeText(this,"请选择事故类型",Toast.LENGTH_SHORT).show();return;}
+            draft.type=selectedType[0]; draft.equipment=equipment.getText().toString().trim(); draft.people=people.getText().toString().trim();
+            if(!draft.area.isEmpty()) db.addCatalogValue("area",draft.area); if(!draft.equipment.isEmpty()) db.addEquipment(draft.equipment);
             draft.attachments=new java.util.ArrayList<>(pendingAttachments); incidentAnalysis(draft);
         }));
         addBottomNav("记录");
@@ -578,7 +583,7 @@ public class MainActivity extends Activity {
         LinearLayout filters=new LinearLayout(this);
         filters.setOrientation(LinearLayout.HORIZONTAL);
         Spinner timeFilter=spinner(filters,"",java.util.Arrays.asList("全部时间","本月","本季度","本年度"));
-        Spinner typeFilter=spinner(filters,"",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        Spinner typeFilter=spinner(filters,"",catalogFilter("type","全部类型"));
         Spinner statusFilter=spinner(filters,"",java.util.Arrays.asList("全部状态","待整改","整改中","已完成","已逾期"));
         Spinner areaFilter=spinner(filters,"",catalogFilter("area","全部区域"));
         Spinner teamFilter=spinner(filters,"",catalogFilter("team","全部班组"));
@@ -990,7 +995,8 @@ public class MainActivity extends Activity {
         note.setText("新增项目会立即用于事故登记和筛选。长按项目可停用；已保存的历史事故记录不会被修改。");
         note.setTextColor(0xFF64748B);note.setTextSize(13);note.setPadding(4,4,4,10);
         content.addView(note);
-        EditText input=field(content,"新增"+(category.equals("team")?"班组":"区域")+"名称","请输入名称","",1);
+        String categoryLabel=category.equals("team")?"班组":(category.equals("area")?"区域":"事故类型");
+        EditText input=field(content,"新增"+categoryLabel+"名称","请输入名称","",1);
         content.addView(button("添加到档案",()->{
             String value=input.getText().toString().trim();
             if(db.addCatalogValue(category,value)){Toast.makeText(this,"档案已添加",Toast.LENGTH_SHORT).show();showCatalog(title,category);}
@@ -1073,6 +1079,7 @@ public class MainActivity extends Activity {
         catalogs.addView(settingItem("设备管理",this::equipment));
         catalogs.addView(settingItem("班组管理",()->showCatalog("班组管理","team")));
         catalogs.addView(settingItem("区域管理",()->showCatalog("区域管理","area")));
+        catalogs.addView(settingItem("事故类型管理",()->showCatalog("事故类型管理","type")));
         LinearLayout safety=settingsGroup(body,"数据安全","备份文件包含事故数据库及照片、视频附件");
         safety.addView(settingItem("数据备份",this::startBackup));
         safety.addView(settingItem("从备份恢复数据",this::chooseRestore));
