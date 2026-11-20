@@ -533,6 +533,21 @@ public class MainActivity extends Activity {
                     ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
                 top.addView(status);
                 item.addView(top);
+                if(!"已完成".equals(r[14]) && r[13]!=null && !r[13].trim().isEmpty()) {
+                    String todayText=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+                    if(r[13].compareTo(todayText)<0) {
+                        TextView overdue=new TextView(this);
+                        overdue.setText("逾期整改 · 截止 "+r[13]);
+                        overdue.setTextColor(0xFFC43B36);
+                        overdue.setTextSize(12);
+                        overdue.setTypeface(null,Typeface.BOLD);
+                        overdue.setPadding(9,4,9,4);
+                        overdue.setBackground(rounded(0xFFFFE8E6,12));
+                        LinearLayout.LayoutParams overdueLp=new LinearLayout.LayoutParams(-2,-2);
+                        overdueLp.setMargins(0,6,0,0);
+                        item.addView(overdue,overdueLp);
+                    }
+                }
                 TextView meta=new TextView(this);
                 meta.setText(occurred+"  ·  "+r[2]+"  ·  "+r[3]);
                 meta.setTextColor(0xFF64748B);
@@ -545,6 +560,11 @@ public class MainActivity extends Activity {
                 summary.setTextColor(ink);
                 summary.setTextSize(14);
                 summary.setMaxLines(2);
+                summary.setLineSpacing(2,1f);
+                summary.setPadding(10,9,10,9);
+                int summaryBg="设备损伤".equals(r[4])?0xFFFFF5E9:
+                    ("物料混料".equals(r[4])?0xFFEAF4FF:0xFFFFEEF0);
+                summary.setBackground(rounded(summaryBg,12));
                 item.addView(summary);
                 item.setOnClickListener(v->showIncidentDetail(r));
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
