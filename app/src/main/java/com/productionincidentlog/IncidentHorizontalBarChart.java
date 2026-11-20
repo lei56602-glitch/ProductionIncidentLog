@@ -45,18 +45,28 @@ public class IncidentHorizontalBarChart extends View {
             paint.setTextSize(12);
             paint.setTextAlign(Paint.Align.LEFT);
             String label = labels[i] == null ? "" : labels[i];
-            if (label.length() > 7) label = label.substring(0, 7);
+            float labelLimit = labelWidth - 9;
+            while (!label.isEmpty() && paint.measureText(label) > labelLimit) {
+                label = label.substring(0, label.length() - 1);
+            }
+            if (!label.equals(labels[i]) && labelLimit > paint.measureText("…")) {
+                while (!label.isEmpty() && paint.measureText(label + "…") > labelLimit) {
+                    label = label.substring(0, label.length() - 1);
+                }
+                label += "…";
+            }
             canvas.drawText(label, 3, centerY + 4, paint);
             paint.setColor(0xFFE9EEF5);
             canvas.drawRoundRect(left, centerY - 7, right, centerY + 7, 8, 8, paint);
-            float end = left + (right - left) * values[i] / (float) max;
+            int value = i < values.length ? Math.max(0, values[i]) : 0;
+            float end = left + (right - left) * value / (float) max;
             paint.setColor(i < 2 && labels.length == 2 ? green : blue);
             canvas.drawRoundRect(left, centerY - 7, Math.max(left + 2, end), centerY + 7, 8, 8, paint);
             paint.setColor(ink);
             paint.setTextSize(12);
             paint.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD));
             paint.setTextAlign(Paint.Align.RIGHT);
-            canvas.drawText(String.valueOf(values[i]), getWidth() - 4, centerY + 4, paint);
+            canvas.drawText(String.valueOf(value), getWidth() - 4, centerY + 4, paint);
         }
     }
 }
