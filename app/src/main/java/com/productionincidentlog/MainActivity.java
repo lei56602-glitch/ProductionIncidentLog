@@ -203,7 +203,12 @@ public class MainActivity extends Activity {
         tile.setText(icon+"\n"+label+"\n"+count+" 起");
         tile.setGravity(android.view.Gravity.CENTER);
         tile.setTextColor(ink); tile.setTextSize(14); tile.setTypeface(null,Typeface.BOLD);
-        tile.setPadding(5,13,5,13); tile.setBackground(rounded(background,16));
+        tile.setPadding(5,13,5,13);
+        tile.setMinHeight(92);
+        tile.setElevation(1.5f);
+        tile.setBackground(rounded(background,16));
+        tile.setFocusable(true);
+        tile.setClickable(true);
         return tile;
     }
 
