@@ -54,8 +54,9 @@ public class MainActivity extends Activity {
         if(title!=null && !title.isEmpty()) {
             LinearLayout header=new LinearLayout(this);
             header.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            header.setPadding(8,9,12,9);
-            header.setBackground(rounded(0xFF0866D8,18));
+            header.setPadding(8,7,12,7);
+            header.setBackground(rounded(0xFF0866D8,0));
+            header.setElevation(2);
             TextView back=new TextView(this); back.setText("‹"); back.setTextSize(34);
             back.setTextColor(0xFFFFFFFF); back.setGravity(android.view.Gravity.CENTER);
             back.setMinWidth(42); header.addView(back);
