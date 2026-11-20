@@ -368,7 +368,8 @@ public class MainActivity extends Activity {
                     for(android.net.Uri uri:draft.attachments){String mime=getContentResolver().getType(uri);try{
                         String savedUri=copyAttachmentToPrivate(uri,code,mime); db.addAttachment(code,savedUri,mime==null?"application/octet-stream":mime); saved++;
                     }catch(Exception e){Toast.makeText(this,"附件保存失败："+e.getMessage(),Toast.LENGTH_LONG).show();}}
-                    Toast.makeText(this,"事故档案保存成功："+code+"，附件 "+saved+" 个",Toast.LENGTH_LONG).show(); dashboard();
+                    Toast.makeText(this,"事故档案保存成功："+code+"，附件 "+saved+" 个",Toast.LENGTH_LONG).show();
+                    showSubmissionComplete(code,saved);
                 }).show();
         }));
         root.addView(button("返回：修改基本信息",()->{
@@ -377,6 +378,32 @@ public class MainActivity extends Activity {
             draft.prevention=prevention.getText().toString(); draft.owner=owner.getText().toString(); draft.dueDate=dueDate.getText().toString();
             incidentFormWithDraft(draft);
         }));
+        addBottomNav("记录");
+    }
+    private void showSubmissionComplete(String code,int attachmentCount) {
+        page("事故记录提交完成");
+        LinearLayout body=new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(10,16,10,12);
+        body.addView(stepIndicator(3));
+        TextView success=new TextView(this);
+        success.setText("✓\\n事故记录已成功保存");
+        success.setGravity(android.view.Gravity.CENTER);
+        success.setTextColor(0xFF16865B);
+        success.setTextSize(21);
+        success.setTypeface(null,Typeface.BOLD);
+        success.setPadding(18,28,18,28);
+        success.setBackground(rounded(0xFFE3F7EC,20));
+        body.addView(success);
+        body.addView(card("事故编号",code));
+        body.addView(card("现场附件","已保存 "+attachmentCount+" 个照片 / 视频附件"));
+        body.addView(button("查看事故详情",()->{
+            List<String[]> rows=db.incidents(code);
+            if(!rows.isEmpty()) showIncidentDetail(rows.get(0)); else records();
+        }));
+        body.addView(button("返回首页",this::dashboard));
+        body.addView(button("继续登记下一起事故",this::incidentForm));
+        root.addView(body,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("记录");
     }
     private void incidentFormWithDraft(IncidentDraft draft) {
@@ -674,10 +701,12 @@ public class MainActivity extends Activity {
         EditText to=field(body,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
         LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
         String[] rangeNames={"本月","本季度","本年度","自定义"};
-        for(int ri=0;ri<rangeNames.length;ri++){final int mode=ri;TextView chip=new TextView(this);chip.setText(rangeNames[ri]);chip.setGravity(android.view.Gravity.CENTER);
-            chip.setTextColor(blue);chip.setTextSize(13);chip.setTypeface(null,Typeface.BOLD);chip.setPadding(5,12,5,12);chip.setBackground(rounded(0xFFE7F0FF,16));
+        TextView[] rangeChips=new TextView[rangeNames.length];
+        for(int ri=0;ri<rangeNames.length;ri++){final int mode=ri;TextView chip=new TextView(this);rangeChips[ri]=chip;chip.setText(rangeNames[ri]);chip.setGravity(android.view.Gravity.CENTER);
+            chip.setTextColor(blue);chip.setTextSize(13);chip.setTypeface(null,Typeface.BOLD);chip.setPadding(5,12,5,12);chip.setBackground(rounded(mode==0?0xFF1677EB:0xFFE7F0FF,16));if(mode==0)chip.setTextColor(0xFFFFFFFF);
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.setMargins(3,4,3,8);ranges.addView(chip,cp);
-            chip.setOnClickListener(v->{if(mode==3){from.requestFocus();return;}Calendar cal=Calendar.getInstance();cal.setTime(new Date());
+            chip.setOnClickListener(v->{for(int k=0;k<rangeChips.length;k++){rangeChips[k].setBackground(rounded(k==mode?0xFF1677EB:0xFFE7F0FF,16));rangeChips[k].setTextColor(k==mode?0xFFFFFFFF:blue);}
+                if(mode==3){from.requestFocus();return;}Calendar cal=Calendar.getInstance();cal.setTime(new Date());
                 if(mode==0)cal.set(Calendar.DAY_OF_MONTH,1);else if(mode==1){int q=cal.get(Calendar.MONTH)/3;cal.set(Calendar.MONTH,q*3);cal.set(Calendar.DAY_OF_MONTH,1);}
                 else{cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);}
                 from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));to.setText(today);});
