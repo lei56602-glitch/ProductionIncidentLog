@@ -98,6 +98,15 @@ public class MainActivity extends Activity {
         TextView t=new TextView(this); t.setText(title+"\n"+value); t.setTextSize(16); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD);
         t.setPadding(dp(16),dp(16),dp(16),dp(16)); t.setBackground(rounded(0xFFFFFFFF,dp(18))); t.setElevation(dp(1)); return t;
     }
+    private void addAdaptiveScroll(ScrollView scroll) {
+        int availableDp=Math.max(1,getResources().getConfiguration().screenWidthDp-32);
+        int contentWidthDp=Math.min(availableDp,760);
+        android.widget.FrameLayout frame=new android.widget.FrameLayout(this);
+        android.widget.FrameLayout.LayoutParams contentLp=new android.widget.FrameLayout.LayoutParams(
+            dp(contentWidthDp),-1,android.view.Gravity.CENTER_HORIZONTAL);
+        frame.addView(scroll,contentLp);
+        root.addView(frame,new LinearLayout.LayoutParams(-1,0,1));
+    }
     private void addBottomNav(String selected) {
         LinearLayout nav=new LinearLayout(this);
         nav.setGravity(android.view.Gravity.CENTER);
@@ -372,7 +381,7 @@ public class MainActivity extends Activity {
         closure.addView(closureTop);closure.addView(closureBottom);body.addView(closure);
         // Keep the dashboard focused on the reference layout; reminders and reports remain available from their dedicated pages.
 
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         addBottomNav("首页");
     }
     private boolean validIncidentDate(String value) {
