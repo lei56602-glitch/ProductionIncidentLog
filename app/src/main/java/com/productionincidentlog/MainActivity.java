@@ -85,12 +85,65 @@ public class MainActivity extends Activity {
         t.setPadding(16,16,16,16); t.setBackground(rounded(0xFFFFFFFF,22)); t.setElevation(2); return t;
     }
     private void addBottomNav(String selected) {
-        LinearLayout nav=new LinearLayout(this); nav.setGravity(android.view.Gravity.CENTER); nav.setBackground(rounded(0xFFFFFFFF,20)); nav.setPadding(3,5,3,5);
-        String[] labels={"首页","记录","统计","我的"}; Runnable[] actions={this::dashboard,this::records,this::statistics,this::settingsCenter};
-        for(int i=0;i<labels.length;i++){ final int index=i; TextView item=new TextView(this); item.setText(labels[i]); item.setGravity(android.view.Gravity.CENTER);
-            item.setTextSize(12); item.setTypeface(null,Typeface.BOLD); item.setTextColor(labels[i].equals(selected)?0xFF126FE5:0xFF8392A5); item.setPadding(4,9,4,9);
-            nav.addView(item,new LinearLayout.LayoutParams(0,-2,1)); item.setOnClickListener(v->actions[index].run()); }
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,8,0,0); root.addView(nav,lp);
+        LinearLayout nav=new LinearLayout(this);
+        nav.setGravity(android.view.Gravity.CENTER);
+        nav.setBackground(rounded(0xFFFFFFFF,20));
+        nav.setPadding(4,4,4,4);
+        String[] labels={"首页","记录","统计","我的"};
+        String[] icons={"⌂","▤","▥","♙"};
+        Runnable[] actions={this::dashboard,this::records,this::statistics,this::settingsCenter};
+        for(int i=0;i<labels.length;i++) {
+            final int index=i;
+            TextView item=new TextView(this);
+            item.setText(icons[i]+"\\n"+labels[i]);
+            item.setGravity(android.view.Gravity.CENTER);
+            item.setTextSize(12);
+            item.setTypeface(null,Typeface.BOLD);
+            item.setTextColor(labels[i].equals(selected)?0xFF126FE5:0xFF8392A5);
+            item.setPadding(4,7,4,7);
+            nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
+            item.setOnClickListener(v->actions[index].run());
+        }
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(0,8,0,0);
+        root.addView(nav,lp);
+    }
+    private LinearLayout stepIndicator(int current) {
+        LinearLayout row=new LinearLayout(this);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(3,14,3,18);
+        String[] labels={"基本信息","详细内容","完成"};
+        for(int i=0;i<3;i++) {
+            LinearLayout item=new LinearLayout(this);
+            item.setGravity(android.view.Gravity.CENTER);
+            item.setOrientation(LinearLayout.VERTICAL);
+            TextView number=new TextView(this);
+            number.setText(i<current?"✓":String.valueOf(i+1));
+            number.setGravity(android.view.Gravity.CENTER);
+            number.setTextColor(i+1<=current?0xFFFFFFFF:0xFF718096);
+            number.setTextSize(13);
+            number.setTypeface(null,Typeface.BOLD);
+            number.setBackground(rounded(i+1<=current?0xFF1677EB:0xFFE2E8F0,40));
+            number.setWidth(30);
+            number.setHeight(30);
+            TextView label=new TextView(this);
+            label.setText(labels[i]);
+            label.setTextSize(11);
+            label.setTextColor(i+1==current?blue:0xFF718096);
+            label.setTypeface(null,Typeface.BOLD);
+            label.setPadding(0,5,0,0);
+            item.addView(number);
+            item.addView(label);
+            row.addView(item,new LinearLayout.LayoutParams(0,-2,1));
+            if(i<2) {
+                View line=new View(this);
+                line.setBackgroundColor(i+1<current?blue:0xFFD5DFEA);
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,2,1);
+                lp.setMargins(0,-18,0,0);
+                row.addView(line,lp);
+            }
+        }
+        return row;
     }
     private class IndustrialHero extends TextView {
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
@@ -239,8 +292,7 @@ public class MainActivity extends Activity {
         page("新增事故记录 · 基本信息");
         ScrollView scroll=new ScrollView(this);
         LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
-        TextView step=new TextView(this); step.setText("● 1 基本信息     ━━━━━     ○ 2 详细内容     ○ 3 完成");
-        step.setTextColor(blue); step.setTextSize(14); step.setTypeface(null,Typeface.BOLD); step.setPadding(4,12,4,18); form.addView(step);
+        form.addView(stepIndicator(1));
         TextView typeLabel=sectionTitle("事故类型");
         form.addView(typeLabel);
         LinearLayout typeRow=new LinearLayout(this); typeRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -289,8 +341,7 @@ public class MainActivity extends Activity {
     private void incidentAnalysis(IncidentDraft draft) {
         page("新增事故记录 · 详细内容");
         ScrollView scroll=new ScrollView(this); LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
-        TextView step=new TextView(this); step.setText("✓ 1 基本信息     ━━━━━     ● 2 详细内容     ○ 3 完成");
-        step.setTextColor(blue); step.setTextSize(14); step.setTypeface(null,Typeface.BOLD); step.setPadding(4,12,4,18); form.addView(step);
+        form.addView(stepIndicator(2));
         TextView heading=sectionTitle("事故分析"); form.addView(heading);
         EditText description=field(form,"事故经过 *","请描述事故发生过程（不少于 50 字）",draft.description==null?"":draft.description,4);
         EditText analysis=field(form,"事故分析 *","分析事故过程、存在的问题及影响",draft.analysis==null?"":draft.analysis,4);
@@ -585,13 +636,16 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(title).setItems(values,(dialog,which)->{}).setPositiveButton("关闭",null).show();
     }
     private void settingsCenter() {
-        page("设置中心"); ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        page("设置中心"); ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(3,10,3,12); scroll.addView(body);
+        body.addView(sectionTitle("基础资料管理"));
         body.addView(settingItem("设备管理",this::equipment));
         body.addView(settingItem("班组管理",()->showCatalog("班组管理",new String[]{"A班","B班"})));
         body.addView(settingItem("区域管理",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
+        body.addView(sectionTitle("数据安全"));
         body.addView(settingItem("数据备份",this::startBackup));
         body.addView(settingItem("从备份恢复数据",this::chooseRestore)); body.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
         body.addView(settingItem("照片 / 视频附件完整性",this::checkAttachmentIntegrity));
+        body.addView(sectionTitle("系统设置"));
         body.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
             .setMessage("版本：1.0.0\\n数据存储：本机 SQLite\\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
@@ -764,6 +818,10 @@ public class MainActivity extends Activity {
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             count.setText("当前符合条件："+selected[0].size()+" 起事故");
         };
+        TextView pdfOption=card("▣  月度 / 年度事故报告","PDF · 适合查看、归档和打印");
+        reportBody.addView(pdfOption);
+        TextView excelOption=card("▦  事故统计报表","Excel · 汇总、详细记录、统计分析三个工作表");
+        reportBody.addView(excelOption);
         reportBody.addView(button("查询报表范围",load));
         reportBody.addView(button("导出 Excel（三个工作表）",() -> {
             load.run();
@@ -779,9 +837,8 @@ public class MainActivity extends Activity {
                 shareExport(file,"application/pdf");
             } catch(Exception e) { Toast.makeText(this,"PDF 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
         }));
-        reportBody.addView(sectionTitle("导出格式"));
-        reportBody.addView(card("PDF 事故报告","适合查看、归档和打印"));
-        reportBody.addView(card("Excel 统计报表","包含汇总、详细记录和统计分析三个工作表"));
+        reportBody.addView(sectionTitle("导出说明"));
+        reportBody.addView(card("支持条件导出","可按班组、区域、事故类型、设备及自定义日期范围筛选"));
         root.addView(reportScroll,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("记录");
     }
