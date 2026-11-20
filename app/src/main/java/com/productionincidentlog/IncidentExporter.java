@@ -37,8 +37,15 @@ public class IncidentExporter {
             "<Style ss:ID=\"Body\"><Alignment ss:Vertical=\"Top\" ss:WrapText=\"1\"/><Font ss:FontName=\"等线\" ss:Size=\"10\"/><Borders><Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\" ss:Color=\"#E2E8F0\"/></Borders></Style>"+
             "</Styles>";
     }
-    private static String sheet(String name,String content) {
-        return "<Worksheet ss:Name=\""+esc(name)+"\"><Table>"+content+"</Table></Worksheet>";
+    private static String sheet(String name,String content,int columnCount,int dataRows) {
+        StringBuilder columns=new StringBuilder();
+        for(int i=0;i<columnCount;i++) columns.append("<Column ss:AutoFitWidth=\"1\"/>");
+        String range="R1C1:R"+(dataRows+1)+"C"+columnCount;
+        return "<Worksheet ss:Name=\""+esc(name)+"\"><Table>"+columns+content+"</Table>"+
+            "<AutoFilter x:Range=\""+range+"\" xmlns=\"urn:schemas-microsoft-com:office:excel\"/>"+
+            "<WorksheetOptions xmlns=\"urn:schemas-microsoft-com:office:excel\">"+
+            "<FreezePanes/><FrozenNoSplit/><SplitHorizontal>1</SplitHorizontal><TopRowBottomPane>1</TopRowBottomPane><ActivePane>2</ActivePane>"+
+            "</WorksheetOptions></Worksheet>";
     }
     public static File writeExcel(Context context,List<String[]> rows,String from,String to) throws Exception {
         StringBuilder summary=new StringBuilder();
@@ -62,8 +69,9 @@ public class IncidentExporter {
         String xml="<?xml version=\"1.0\" encoding=\"UTF-8\"?><?mso-application progid=\"Excel.Sheet\"?>"+
             "<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" "+
             "xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">"+
-            styles()+sheet("事故汇总表",summary.toString())+sheet("事故详细记录",details.toString())+
-            sheet("事故统计表",stats.toString())+"</Workbook>";
+            styles()+sheet("事故汇总表",summary.toString(),9,rows.size())+
+            sheet("事故详细记录",details.toString(),15,rows.size())+
+            sheet("事故统计表",stats.toString(),3,1+types.size()+teams.size()+areas.size()+equipment.size())+"</Workbook>";
         File dir=new File(context.getCacheDir(),"exports"); if(!dir.exists()) dir.mkdirs();
         String stamp=new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date());
         File file=new File(dir,"生产事故报表_"+stamp+".xls");
@@ -85,8 +93,17 @@ public class IncidentExporter {
             this.pdf=pdf;this.paint=paint;this.from=from;this.to=to;this.total=total;
             newPage();
         }
+        void finishCurrentPage() {
+            if(page==null) return;
+            paint.setColor(0xFF94A3B8);paint.setStrokeWidth(0.6f);
+            canvas.drawLine(40,814,555,814,paint);
+            paint.setColor(0xFF64748B);paint.setTextSize(8);paint.setTypeface(Typeface.DEFAULT);
+            String footer="生产事故管理系统  ·  第 "+pageNo+" 页";
+            canvas.drawText(footer,555-paint.measureText(footer),830,paint);
+            pdf.finishPage(page);page=null;
+        }
         void newPage() {
-            if(page!=null) pdf.finishPage(page);
+            if(page!=null) finishCurrentPage();
             PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,++pageNo).create();
             page=pdf.startPage(info);canvas=page.getCanvas();y=42;
             paint.setColor(Color.BLACK);paint.setTextSize(17);
@@ -123,7 +140,7 @@ public class IncidentExporter {
                 remaining=remaining.substring(end);first=false;
             }
         }
-        void finish() { if(page!=null){pdf.finishPage(page);page=null;} }
+        void finish() { finishCurrentPage(); }
     }
     public static File writePdf(Context context,List<String[]> rows,String from,String to) throws Exception {
         PdfDocument pdf=new PdfDocument();
