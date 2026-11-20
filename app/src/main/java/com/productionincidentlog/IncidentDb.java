@@ -115,6 +115,14 @@ public class IncidentDb extends SQLiteOpenHelper {
 
 
 
+    public List<String[]> allAttachments() {
+        List<String[]> rows = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT incident_code,uri,mime_type FROM incident_attachments ORDER BY id", null)) {
+            while (c.moveToNext()) rows.add(new String[]{c.getString(0),c.getString(1),c.getString(2)});
+        }
+        return rows;
+    }
+
     public void updateAttachmentUri(String code, String oldUri, String newUri) {
         ContentValues values = new ContentValues(); values.put("uri", newUri);
         getWritableDatabase().update("incident_attachments", values,
