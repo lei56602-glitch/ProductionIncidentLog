@@ -209,7 +209,8 @@ public class MainActivity extends Activity {
         android.widget.FrameLayout heroFrame=new android.widget.FrameLayout(this);
         IndustrialHero hero=new IndustrialHero(this);
         hero.setElevation(4);
-        android.widget.FrameLayout.LayoutParams heroLp=new android.widget.FrameLayout.LayoutParams(-1,-2);\n        heroFrame.addView(hero,heroLp);
+        android.widget.FrameLayout.LayoutParams heroLp=new android.widget.FrameLayout.LayoutParams(-1,-2);
+        heroFrame.addView(hero,heroLp);
         TextView gear=new TextView(this);
         gear.setText("⚙"); gear.setTextSize(24); gear.setTextColor(0xFFFFFFFF);
         gear.setGravity(android.view.Gravity.CENTER); gear.setBackground(rounded(0x55304F78,30));
