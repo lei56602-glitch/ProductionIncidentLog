@@ -1095,9 +1095,9 @@ public class MainActivity extends Activity {
         LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
         String[] rangeNames={"本月","本季度","本年度","自定义"};
         for(int ri=0;ri<rangeNames.length;ri++){ final int mode=ri; TextView chip=new TextView(this); chip.setText(rangeNames[ri]); chip.setGravity(android.view.Gravity.CENTER);
-            chip.setTextColor(blue); chip.setTextSize(13); chip.setTypeface(null,Typeface.BOLD); chip.setPadding(5,12,5,12); chip.setBackground(rounded(0xFFE7F0FF,16));
+            chip.setTextColor(mode==0?0xFFFFFFFF:blue); chip.setTextSize(13); chip.setTypeface(null,Typeface.BOLD); chip.setPadding(5,12,5,12); chip.setBackground(rounded(mode==0?0xFF1677E8:0xFFE7F0FF,16));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1); cp.setMargins(3,4,3,8); ranges.addView(chip,cp);
-            chip.setOnClickListener(v->{ if(mode==3){from.requestFocus();return;} Calendar cal=Calendar.getInstance(); cal.setTime(new Date());
+            chip.setOnClickListener(v->{ for(int k=0;k<ranges.getChildCount();k++){TextView item=(TextView)ranges.getChildAt(k);item.setBackground(rounded(k==mode?0xFF1677E8:0xFFE7F0FF,16));item.setTextColor(k==mode?0xFFFFFFFF:blue);} if(mode==3){from.requestFocus();return;} Calendar cal=Calendar.getInstance(); cal.setTime(new Date());
                 if(mode==0) cal.set(Calendar.DAY_OF_MONTH,1);
                 else if(mode==1){int q=cal.get(Calendar.MONTH)/3;cal.set(Calendar.MONTH,q*3);cal.set(Calendar.DAY_OF_MONTH,1);}
                 else {cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);}
@@ -1117,9 +1117,8 @@ public class MainActivity extends Activity {
         Runnable load = () -> {
             loadValid[0]=false;
             String f=from.getText().toString().trim(), t=to.getText().toString().trim();
-            if ((!f.isEmpty() && !f.matches("\\d{4}-\\d{2}-\\d{2}")) ||
-                (!t.isEmpty() && !t.matches("\\d{4}-\\d{2}-\\d{2}"))) {
-                Toast.makeText(this,"日期格式请使用 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
+            if (!validDueDate(f) || !validDueDate(t)) {
+                Toast.makeText(this,"日期无效，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
             }
             if (!f.isEmpty() && !t.isEmpty() && f.compareTo(t)>0) {
                 Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
