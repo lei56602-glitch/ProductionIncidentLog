@@ -211,13 +211,13 @@ public class MainActivity extends Activity {
             startActivityForResult(pick,REQUEST_ATTACHMENTS);
         }));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        addBottomNav("记录");
         root.addView(button("下一步：事故分析",()->{
             if(!validIncidentDate(date.getText().toString())){Toast.makeText(this,"发生时间格式错误，请使用 yyyy-MM-dd HH:mm",Toast.LENGTH_SHORT).show();return;}
             draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
             draft.type=types[selectedType[0]]; draft.equipment=equipment.getSelectedItem().toString(); draft.people=people.getText().toString().trim();
             draft.attachments=new java.util.ArrayList<>(pendingAttachments); incidentAnalysis(draft);
         }));
+        addBottomNav("记录");
     }
     private void incidentAnalysis(IncidentDraft draft) {
         page("新增事故记录 · 详细内容");
@@ -233,7 +233,6 @@ public class MainActivity extends Activity {
         EditText owner=field(form,"整改负责人","负责推动整改的人",draft.owner==null?"":draft.owner,1);
         EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",draft.dueDate==null?"":draft.dueDate,1);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        addBottomNav("记录");
         root.addView(button("下一步：确认提交",()->{
             if(description.getText().toString().trim().isEmpty()||analysis.getText().toString().trim().isEmpty()
                 ||cause.getText().toString().trim().isEmpty()||action.getText().toString().trim().isEmpty()
@@ -260,6 +259,7 @@ public class MainActivity extends Activity {
             draft.prevention=prevention.getText().toString(); draft.owner=owner.getText().toString(); draft.dueDate=dueDate.getText().toString();
             incidentFormWithDraft(draft);
         }));
+        addBottomNav("记录");
     }
     private void incidentFormWithDraft(IncidentDraft draft) {
         pendingAttachments=new java.util.ArrayList<>(draft.attachments);
