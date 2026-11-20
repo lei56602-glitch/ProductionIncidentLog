@@ -1143,7 +1143,7 @@ public class MainActivity extends Activity {
         body.addView(sectionTitle("筛选条件"));
         Spinner team=spinner(body,"班组",catalogFilter("team","全部班组"));
         Spinner area=spinner(body,"区域",catalogFilter("area","全部区域"));
-        Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        Spinner type=spinner(body,"事故类型",catalogFilter("type","全部类型"));
         Spinner status=spinner(body,"整改状态",java.util.Arrays.asList("全部状态","待整改","整改中","已完成","已逾期"));
         List<String> equipmentOptions=new java.util.ArrayList<>(); equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
         Spinner equipment=spinner(body,"设备",equipmentOptions);
