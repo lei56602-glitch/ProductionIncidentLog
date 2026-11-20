@@ -7,15 +7,19 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class IncidentDb extends SQLiteOpenHelper {
-    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 2); }
+    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 3); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE equipment(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,active INTEGER NOT NULL DEFAULT 1)");
         db.execSQL("CREATE TABLE incidents(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,occurred_at TEXT NOT NULL,team TEXT NOT NULL,area TEXT NOT NULL,type TEXT NOT NULL,equipment TEXT NOT NULL,people TEXT,description TEXT NOT NULL,analysis TEXT NOT NULL,cause TEXT NOT NULL,immediate_action TEXT NOT NULL,prevention TEXT NOT NULL,owner TEXT,due_date TEXT,status TEXT NOT NULL DEFAULT '待整改',created_at TEXT NOT NULL)");
         seed(db, "滚筒"); seed(db, "除湿机");
         db.execSQL("CREATE TABLE incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
+        db.execSQL("CREATE TABLE incident_status_history(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,old_status TEXT NOT NULL,new_status TEXT NOT NULL,changed_at TEXT NOT NULL)");
     }
 
     private void seed(SQLiteDatabase db, String name) {
@@ -24,6 +28,7 @@ public class IncidentDb extends SQLiteOpenHelper {
     }
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
+        if (oldVersion < 3) db.execSQL("CREATE TABLE IF NOT EXISTS incident_status_history(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,old_status TEXT NOT NULL,new_status TEXT NOT NULL,changed_at TEXT NOT NULL)");
     }
 
     public List<String> equipmentNames() {
@@ -103,6 +108,15 @@ public class IncidentDb extends SQLiteOpenHelper {
     }
 
 
+
+    public List<String[]> statusHistory(String code) {
+        List<String[]> rows = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT old_status,new_status,changed_at FROM incident_status_history WHERE incident_code=? ORDER BY id DESC", new String[]{code})) {
+            while (c.moveToNext()) rows.add(new String[]{c.getString(0),c.getString(1),c.getString(2)});
+        }
+        return rows;
+    }
+
     public int updateIncident(String code, String date, String team, String area, String type, String equipment,
             String people, String description, String analysis, String cause, String action, String prevention, String owner, String dueDate) {
         ContentValues v = new ContentValues();
@@ -116,14 +130,28 @@ public class IncidentDb extends SQLiteOpenHelper {
         database.beginTransaction();
         try {
             database.delete("incident_attachments","incident_code=?",new String[]{code});
+            database.delete("incident_status_history","incident_code=?",new String[]{code});
             database.delete("incidents","code=?",new String[]{code});
             database.setTransactionSuccessful();
         } finally { database.endTransaction(); }
     }
 
     public void updateStatus(String code, String status) {
-        ContentValues values = new ContentValues();
-        values.put("status", status);
-        getWritableDatabase().update("incidents", values, "code=?", new String[]{code});
+        SQLiteDatabase database = getWritableDatabase();
+        String previous = "";
+        try (Cursor c = database.rawQuery("SELECT status FROM incidents WHERE code=?", new String[]{code})) {
+            if (c.moveToFirst()) previous = c.getString(0);
+        }
+        if (status == null || status.equals(previous)) return;
+        database.beginTransaction();
+        try {
+            ContentValues values = new ContentValues(); values.put("status", status);
+            database.update("incidents", values, "code=?", new String[]{code});
+            ContentValues event = new ContentValues();
+            event.put("incident_code",code); event.put("old_status",previous);
+            event.put("new_status",status); event.put("changed_at",new SimpleDateFormat("yyyy-MM-dd HH:mm:ss",Locale.getDefault()).format(new Date()));
+            database.insert("incident_status_history",null,event);
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
     }
 }
