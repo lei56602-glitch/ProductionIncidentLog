@@ -102,6 +102,25 @@ public class IncidentDb extends SQLiteOpenHelper {
         return rows;
     }
 
+
+    public int updateIncident(String code, String date, String team, String area, String type, String equipment,
+            String people, String description, String analysis, String cause, String action, String prevention, String owner, String dueDate) {
+        ContentValues v = new ContentValues();
+        v.put("occurred_at",date); v.put("team",team); v.put("area",area); v.put("type",type); v.put("equipment",equipment);
+        v.put("people",people); v.put("description",description); v.put("analysis",analysis); v.put("cause",cause);
+        v.put("immediate_action",action); v.put("prevention",prevention); v.put("owner",owner); v.put("due_date",dueDate);
+        return getWritableDatabase().update("incidents",v,"code=?",new String[]{code});
+    }
+    public void deleteIncident(String code) {
+        SQLiteDatabase database = getWritableDatabase();
+        database.beginTransaction();
+        try {
+            database.delete("incident_attachments","incident_code=?",new String[]{code});
+            database.delete("incidents","code=?",new String[]{code});
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+    }
+
     public void updateStatus(String code, String status) {
         ContentValues values = new ContentValues();
         values.put("status", status);
