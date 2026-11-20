@@ -499,7 +499,8 @@ public class MainActivity extends Activity {
                 if("本月".equals(period) && !occurred.startsWith(currentMonth)) continue;
                 if("本季度".equals(period) && (day.length()<7 ||
                     !day.startsWith(String.format(Locale.US,"%04d-",currentYear)) ||
-                    Integer.parseInt(day.substring(5,7))<quarterStart)) continue;
+                    Integer.parseInt(day.substring(5,7))<quarterStart ||
+                    Integer.parseInt(day.substring(5,7))>quarterStart+2)) continue;
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
                 if(!"全部区域".equals(areaChoice) && !areaChoice.equals(r[3])) continue;
