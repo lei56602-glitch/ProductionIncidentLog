@@ -7,6 +7,10 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.ViewGroup;
 import android.widget.*;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import android.graphics.Typeface;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,6 +26,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_ATTACHMENTS = 4102;
     private static final int REQUEST_BACKUP = 4103;
     private static final int REQUEST_RESTORE = 4104;
+    private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private TextView attachmentHint;
     private LinearLayout attachmentPreview;
 
@@ -46,45 +51,58 @@ public class MainActivity extends Activity {
         android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setColor(color); d.setCornerRadius(radius); return d;
     }
     private TextView sectionTitle(String value) {
-        TextView t=new TextView(this); t.setText(value); t.setTextSize(17); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD); t.setPadding(4,16,4,8); return t;
+        TextView t=new TextView(this); t.setText(value); t.setTextSize(17); t.setTextColor(ink);
+        t.setTypeface(null,Typeface.BOLD); t.setPadding(dp(4),dp(18),dp(4),dp(9)); return t;
     }
     private void page(String title) {
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(12,0,12,10); root.setBackgroundColor(0xFFF1F5FB);
+        root.setPadding(dp(16),dp(8),dp(16),dp(8)); root.setBackgroundColor(0xFFF3F6FA);
         if(title!=null && !title.isEmpty()) {
             LinearLayout header=new LinearLayout(this);
             header.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            header.setPadding(8,7,12,7);
-            header.setBackground(rounded(0xFF0866D8,0));
-            header.setElevation(2);
+            header.setPadding(dp(6),dp(4),dp(14),dp(4));
+            header.setMinimumHeight(dp(56));
+            header.setBackground(rounded(0xFF0866D8,dp(18)));
+            header.setElevation(dp(1));
             TextView back=new TextView(this); back.setText("‹"); back.setTextSize(34);
             back.setTextColor(0xFFFFFFFF); back.setGravity(android.view.Gravity.CENTER);
-            back.setMinWidth(42); header.addView(back);
+            back.setMinWidth(dp(48)); back.setMinHeight(dp(48)); header.addView(back);
             back.setOnClickListener(v->dashboard());
             TextView h=new TextView(this); h.setText(title); h.setTextSize(18);
             h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
             h.setGravity(android.view.Gravity.CENTER);
             header.addView(h,new LinearLayout.LayoutParams(0,-2,1));
-            root.addView(header,new LinearLayout.LayoutParams(-1,-2));
+            LinearLayout.LayoutParams headerLp=new LinearLayout.LayoutParams(-1,-2);
+            headerLp.bottomMargin=dp(8); root.addView(header,headerLp);
         }
+        WindowCompat.setDecorFitsSystemWindows(getWindow(),false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        WindowInsetsControllerCompat bars=WindowCompat.getInsetsController(getWindow(),getWindow().getDecorView());
+        if(bars!=null){bars.setAppearanceLightStatusBars(true);bars.setAppearanceLightNavigationBars(true);}
+        ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)->{
+            androidx.core.graphics.Insets safe=insets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(dp(16)+safe.left,dp(8)+safe.top,dp(16)+safe.right,dp(8)+safe.bottom);
+            return insets;
+        });
         setContentView(root);
-        getWindow().setStatusBarColor(0xFF0759C5);
-        getWindow().setNavigationBarColor(0xFFF7FAFE);
+        ViewCompat.requestApplyInsets(root);
     }
     private Button button(String text,Runnable run) {
         Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextColor(0xFFFFFFFF); b.setTextSize(15); b.setTypeface(null,Typeface.BOLD);
-        b.setPadding(12,8,12,8); b.setBackground(rounded(0xFF1677EB,18)); b.setElevation(2);
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,5,0,5); b.setLayoutParams(lp); b.setOnClickListener(v->run.run()); return b;
+        b.setPadding(dp(16),dp(12),dp(16),dp(12)); b.setMinHeight(dp(52)); b.setBackground(rounded(0xFF1677EB,dp(16))); b.setElevation(dp(1));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,dp(4),0,dp(4)); b.setLayoutParams(lp); b.setOnClickListener(v->run.run()); return b;
     }
     private TextView card(String title,String value) {
         TextView t=new TextView(this); t.setText(title+"\n"+value); t.setTextSize(16); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD);
-        t.setPadding(16,16,16,16); t.setBackground(rounded(0xFFFFFFFF,22)); t.setElevation(2); return t;
+        t.setPadding(dp(16),dp(16),dp(16),dp(16)); t.setBackground(rounded(0xFFFFFFFF,dp(18))); t.setElevation(dp(1)); return t;
     }
     private void addBottomNav(String selected) {
         LinearLayout nav=new LinearLayout(this);
         nav.setGravity(android.view.Gravity.CENTER);
         nav.setBackground(rounded(0xFFFFFFFF,20));
-        nav.setPadding(4,4,4,4);
+        nav.setPadding(dp(4),dp(4),dp(4),dp(4)); nav.setMinimumHeight(dp(64));
         String[] labels={"首页","记录","统计","我的"};
         String[] icons={"⌂","▤","▥","♙"};
         Runnable[] actions={this::dashboard,this::records,this::statistics,this::settingsCenter};
@@ -97,12 +115,12 @@ public class MainActivity extends Activity {
             item.setTypeface(null,Typeface.BOLD);
             item.setTextColor(labels[i].equals(selected)?0xFF126FE5:0xFF8392A5);
             item.setBackground(rounded(labels[i].equals(selected)?0xFFE6F1FF:0x00FFFFFF,14));
-            item.setPadding(4,7,4,7);
+            item.setPadding(dp(4),dp(7),dp(4),dp(7)); item.setMinHeight(dp(56));
             nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
             item.setOnClickListener(v->actions[index].run());
         }
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
-        lp.setMargins(0,8,0,0);
+        lp.setMargins(0,dp(8),0,0);
         root.addView(nav,lp);
     }
     private LinearLayout stepIndicator(int current) {
@@ -156,20 +174,20 @@ public class MainActivity extends Activity {
             title.setSpan(new android.text.style.ForegroundColorSpan(0xFFDCEEFF),9,title.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             setText(title);setTextColor(0xFFFFFFFF);setTextSize(20);
             setGravity(android.view.Gravity.CENTER_VERTICAL|android.view.Gravity.LEFT);setTypeface(null,Typeface.BOLD);
-            setShadowLayer(2.5f,0,1.5f,0x6600183D);setPadding(22,28,20,28);setMinHeight(204);
+            setShadowLayer(2.5f,0,1.5f,0x6600183D);setPadding(dp(20),dp(24),dp(20),dp(24));setMinHeight(dp(168));
             setContentDescription("生产事故管理系统，现场异常记录、分析与整改闭环");}
         @Override protected void onDraw(android.graphics.Canvas canvas){
             float w=getWidth(),h=getHeight();
             paint.setStyle(android.graphics.Paint.Style.FILL);
             if(background!=null&&!background.isRecycled()){
                 int save=canvas.save();
-                android.graphics.Path clip=new android.graphics.Path();clip.addRoundRect(0,0,w,h,24,24,android.graphics.Path.Direction.CW);canvas.clipPath(clip);
+                android.graphics.Path clip=new android.graphics.Path();clip.addRoundRect(0,0,w,h,dp(22),dp(22),android.graphics.Path.Direction.CW);canvas.clipPath(clip);
                 float scale=Math.max(w/background.getWidth(),h/background.getHeight());
                 float dw=background.getWidth()*scale,dh=background.getHeight()*scale;
                 android.graphics.RectF dst=new android.graphics.RectF((w-dw)/2f,(h-dh)/2f,(w+dw)/2f,(h+dh)/2f);
                 canvas.drawBitmap(background,null,dst,paint);
                 paint.setShader(new android.graphics.LinearGradient(0,0,w,0,0xB8072F68,0x44052F70,android.graphics.Shader.TileMode.CLAMP));
-                canvas.drawRoundRect(0,0,w,h,24,24,paint);paint.setShader(null);
+                canvas.drawRoundRect(0,0,w,h,dp(22),dp(22),paint);paint.setShader(null);
                 paint.setShader(new android.graphics.LinearGradient(0,0,0,h,0x22052F70,0x99052F70,android.graphics.Shader.TileMode.CLAMP));
                 canvas.drawRoundRect(0,0,w,h,24,24,paint);paint.setShader(null);
                 canvas.restoreToCount(save);
@@ -188,10 +206,10 @@ public class MainActivity extends Activity {
         tile.setText(icon+"\n"+label+"\n"+count+" 起");
         tile.setGravity(android.view.Gravity.CENTER);
         tile.setTextColor(ink); tile.setTextSize(14); tile.setTypeface(null,Typeface.BOLD);
-        tile.setPadding(5,13,5,13);
-        tile.setMinHeight(92);
-        tile.setElevation(1.5f);
-        tile.setBackground(rounded(background,16));
+        tile.setPadding(dp(8),dp(14),dp(8),dp(14));
+        tile.setMinHeight(dp(104));
+        tile.setElevation(dp(1));
+        tile.setBackground(rounded(background,dp(16)));
         tile.setFocusable(true);
         tile.setClickable(true);
         return tile;
@@ -202,7 +220,7 @@ public class MainActivity extends Activity {
         ScrollView scroll=new ScrollView(this);
         LinearLayout body=new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(8,10,8,12);
+        body.setPadding(dp(4),dp(8),dp(4),dp(12));
         scroll.addView(body);
         android.widget.FrameLayout heroFrame=new android.widget.FrameLayout(this);
         IndustrialHero hero=new IndustrialHero(this);
@@ -246,11 +264,11 @@ public class MainActivity extends Activity {
             tile.setTextColor(ink);
             tile.setTextSize(14);
             tile.setTypeface(null,Typeface.BOLD);
-            tile.setPadding(5,15,5,15);
-            tile.setMinHeight(110);
-            tile.setElevation(2);
+            tile.setPadding(dp(7),dp(14),dp(7),dp(14));
+            tile.setMinHeight(dp(104));
+            tile.setElevation(dp(1));
             tile.setContentDescription("快速登记"+chosen+"事故");
-            tile.setBackground(rounded(colors[i],18));
+            tile.setBackground(rounded(colors[i],dp(16)));
             tile.setFocusable(true);
             tile.setClickable(true);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
