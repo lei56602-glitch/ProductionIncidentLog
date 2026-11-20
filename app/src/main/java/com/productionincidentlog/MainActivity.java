@@ -51,26 +51,21 @@ public class MainActivity extends Activity {
     private void page(String title) {
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(12,0,12,10); root.setBackgroundColor(0xFFF1F5FB);
-        LinearLayout header=new LinearLayout(this);
-        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.setPadding(8,11,12,11);
-        header.setBackground(rounded(0xFF0866D8,20));
-        if(!"生产事故管理系统".equals(title)) {
+        if(title!=null && !title.isEmpty()) {
+            LinearLayout header=new LinearLayout(this);
+            header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            header.setPadding(8,9,12,9);
+            header.setBackground(rounded(0xFF0866D8,18));
             TextView back=new TextView(this); back.setText("‹"); back.setTextSize(34);
             back.setTextColor(0xFFFFFFFF); back.setGravity(android.view.Gravity.CENTER);
             back.setMinWidth(42); header.addView(back);
             back.setOnClickListener(v->dashboard());
+            TextView h=new TextView(this); h.setText(title); h.setTextSize(18);
+            h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
+            h.setGravity(android.view.Gravity.CENTER);
+            header.addView(h,new LinearLayout.LayoutParams(0,-2,1));
+            root.addView(header,new LinearLayout.LayoutParams(-1,-2));
         }
-        TextView h=new TextView(this); h.setText(title); h.setTextSize(19);
-        h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
-        h.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        header.addView(h,new LinearLayout.LayoutParams(0,-2,1));
-        if("生产事故管理系统".equals(title)) {
-            TextView gear=new TextView(this); gear.setText("⚙"); gear.setTextSize(23);
-            gear.setTextColor(0xFFFFFFFF); gear.setPadding(12,0,4,0);
-            header.addView(gear); gear.setOnClickListener(v->settingsCenter());
-        }
-        root.addView(header,new LinearLayout.LayoutParams(-1,-2));
         setContentView(root);
         getWindow().setStatusBarColor(0xFF0759C5);
         getWindow().setNavigationBarColor(0xFFF7FAFE);
@@ -204,15 +199,25 @@ public class MainActivity extends Activity {
     }
 
     private void dashboard() {
-        page("生产事故管理系统");
+        page("");
         ScrollView scroll=new ScrollView(this);
         LinearLayout body=new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
         body.setPadding(2,8,2,8);
         scroll.addView(body);
+        android.widget.FrameLayout heroFrame=new android.widget.FrameLayout(this);
         IndustrialHero hero=new IndustrialHero(this);
         hero.setElevation(4);
-        body.addView(hero);
+        heroFrame.addView(hero,new android.widget.FrameLayout.LayoutParams(-1,-2));
+        TextView gear=new TextView(this);
+        gear.setText("⚙"); gear.setTextSize(24); gear.setTextColor(0xFFFFFFFF);
+        gear.setGravity(android.view.Gravity.CENTER); gear.setBackground(rounded(0x55304F78,30));
+        android.widget.FrameLayout.LayoutParams gearLp=new android.widget.FrameLayout.LayoutParams(
+            (int)(42*getResources().getDisplayMetrics().density),(int)(42*getResources().getDisplayMetrics().density),
+            android.view.Gravity.TOP|android.view.Gravity.RIGHT);
+        gearLp.setMargins(0,8,9,0); heroFrame.addView(gear,gearLp);
+        gear.setOnClickListener(v->settingsCenter());
+        body.addView(heroFrame);
         body.addView(sectionTitle("快速登记事故"));
         LinearLayout quick=new LinearLayout(this);
         quick.setOrientation(LinearLayout.HORIZONTAL);
@@ -274,19 +279,8 @@ public class MainActivity extends Activity {
         }
         overview.addView(overviewTop); overview.addView(overviewBottom);
         body.addView(overview);
-        body.addView(sectionTitle("整改提醒"));
-        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
-        List<String[]> overdue=db.incidentsDue(today,0,true);
-        List<String[]> upcoming=db.incidentsDue(today,7,false);
-        body.addView(card("逾期未完成整改",db.countOverdue(today)+" 起"));
-        if(!overdue.isEmpty()) body.addView(button("查看逾期事故（"+overdue.size()+"）",
-            ()->showFilteredRecords("逾期未完成整改",overdue)));
-        if(!upcoming.isEmpty()) body.addView(button("未来 7 天到期（"+upcoming.size()+"）",
-            ()->showFilteredRecords("未来 7 天到期整改",upcoming)));
-        body.addView(sectionTitle("常用功能"));
-        body.addView(button("＋ 登记新事故",this::incidentForm));
-        body.addView(button("事故档案",this::records));
-        body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
+        // Keep the dashboard focused on the reference layout; reminders and reports remain available from their dedicated pages.
+
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("首页");
     }
