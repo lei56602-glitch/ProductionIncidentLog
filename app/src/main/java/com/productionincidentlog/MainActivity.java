@@ -257,8 +257,12 @@ public class MainActivity extends Activity {
             tile.setTextSize(14);
             tile.setTypeface(null,Typeface.BOLD);
             tile.setPadding(5,15,5,15);
-            tile.setMinHeight(104);
+            tile.setMinHeight(110);
+            tile.setElevation(2);
+            tile.setContentDescription("快速登记"+chosen+"事故");
             tile.setBackground(rounded(colors[i],18));
+            tile.setFocusable(true);
+            tile.setClickable(true);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
             p.setMargins(4,3,4,3);
             quick.addView(tile,p);
