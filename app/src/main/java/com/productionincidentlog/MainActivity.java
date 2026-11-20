@@ -293,7 +293,26 @@ public class MainActivity extends Activity {
         body.addView(card("事故类型 / 设备",r[4]+"\n"+r[5]));
         body.addView(card("涉事人员",r[6]));
         List<String[]> attachments=db.attachments(r[0]);
-        body.addView(button("现场照片 / 视频（"+attachments.size()+"）",()->showAttachments(r[0])));
+        body.addView(sectionTitle("现场照片 / 视频"));
+        if(attachments.isEmpty()) body.addView(card("现场附件","暂无照片或视频"));
+        else {
+            android.widget.HorizontalScrollView mediaScroll=new android.widget.HorizontalScrollView(this);
+            LinearLayout mediaRow=new LinearLayout(this); mediaRow.setOrientation(LinearLayout.HORIZONTAL); mediaScroll.addView(mediaRow);
+            int thumb=(int)(104*getResources().getDisplayMetrics().density);
+            for(String[] attachment:attachments){
+                if(attachment[1]!=null && attachment[1].startsWith("image/")){
+                    ImageView imageView=new ImageView(this); imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    try{imageView.setImageURI(android.net.Uri.parse(attachment[0]));}catch(Exception ignored){}
+                    LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(imageView,mp);
+                    imageView.setOnClickListener(v->showAttachments(r[0]));
+                } else {
+                    TextView video=new TextView(this);video.setText("▶\\n视频");video.setGravity(android.view.Gravity.CENTER);video.setTextColor(blue);video.setBackground(rounded(0xFFE7F0FF,16));
+                    LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(video,mp);video.setOnClickListener(v->showAttachments(r[0]));
+                }
+            }
+            body.addView(mediaScroll);
+        }
+        body.addView(button("查看全部附件（"+attachments.size()+"）",()->showAttachments(r[0])));
         body.addView(sectionTitle("事故内容"));
         body.addView(card("事故经过",r[7])); body.addView(card("事故分析",r[8])); body.addView(card("事故原因",r[9]));
         body.addView(card("当下采取措施",r[10])); body.addView(card("未来如何避免",r[11]));
