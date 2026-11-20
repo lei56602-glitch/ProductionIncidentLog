@@ -546,6 +546,31 @@ public class MainActivity extends Activity {
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("记录");
     }
+    private LinearLayout detailInfoCard(String title,String value,int accent) {
+        LinearLayout panel=new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(15,12,15,12);
+        panel.setBackground(rounded(0xFFFFFFFF,17));
+        panel.setElevation(1);
+        TextView heading=new TextView(this);
+        heading.setText(title);
+        heading.setTextColor(accent);
+        heading.setTextSize(13);
+        heading.setTypeface(null,Typeface.BOLD);
+        TextView content=new TextView(this);
+        content.setText(value==null||value.trim().isEmpty()?"暂无记录":value);
+        content.setTextColor(ink);
+        content.setTextSize(15);
+        content.setPadding(0,5,0,0);
+        content.setLineSpacing(2,1f);
+        panel.addView(heading);
+        panel.addView(content);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(0,4,0,5);
+        panel.setLayoutParams(lp);
+        return panel;
+    }
+
     private void showIncidentDetail(String[] r) {
         page("事故详情");
         ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
@@ -569,9 +594,28 @@ public class MainActivity extends Activity {
             ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
         identity.addView(statusBadge);
         body.addView(identity);
-        body.addView(card("发生时间 / 班组 / 区域",r[1]+"\n"+r[2]+" · "+r[3]));
-        body.addView(card("事故类型 / 设备",r[4]+"\n"+r[5]));
-        body.addView(card("涉事人员",r[6]));
+        LinearLayout incidentSummary=new LinearLayout(this);
+        incidentSummary.setOrientation(LinearLayout.HORIZONTAL);
+        incidentSummary.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        incidentSummary.setPadding(12,12,12,12);
+        incidentSummary.setBackground(rounded(0xFFEAF2FF,18));
+        TextView typeIcon=new TextView(this);
+        String icon="🔧"; int iconBg=0xFFFFF0DF;
+        if("物料混料".equals(r[4])){icon="📦";iconBg=0xFFE5F4FF;}
+        else if("人员受伤".equals(r[4])){icon="✚";iconBg=0xFFFFEDEF;}
+        typeIcon.setText(icon);typeIcon.setTextSize(25);typeIcon.setGravity(android.view.Gravity.CENTER);
+        typeIcon.setBackground(rounded(iconBg,14));
+        LinearLayout.LayoutParams iconLp=new LinearLayout.LayoutParams(54,54);iconLp.setMargins(0,0,12,0);incidentSummary.addView(typeIcon,iconLp);
+        LinearLayout summaryText=new LinearLayout(this);summaryText.setOrientation(LinearLayout.VERTICAL);
+        TextView typeName=new TextView(this);typeName.setText(r[4]);typeName.setTextColor(ink);typeName.setTextSize(16);typeName.setTypeface(null,Typeface.BOLD);
+        TextView equipmentName=new TextView(this);equipmentName.setText(r[5]);equipmentName.setTextColor(0xFF61758A);equipmentName.setTextSize(13);
+        summaryText.addView(typeName);summaryText.addView(equipmentName);
+        incidentSummary.addView(summaryText,new LinearLayout.LayoutParams(0,-2,1));
+        TextView teamArea=new TextView(this);teamArea.setText(r[2]+" · "+r[3]);teamArea.setTextColor(blue);teamArea.setTextSize(13);teamArea.setTypeface(null,Typeface.BOLD);
+        incidentSummary.addView(teamArea);
+        LinearLayout.LayoutParams summaryLp=new LinearLayout.LayoutParams(-1,-2);summaryLp.setMargins(0,5,0,7);body.addView(incidentSummary,summaryLp);
+        body.addView(detailInfoCard("发生时间",r[1],0xFF1769C2));
+        body.addView(detailInfoCard("涉事人员",r[6],0xFF1769C2));
         List<String[]> attachments=db.attachments(r[0]);
         body.addView(sectionTitle("现场照片 / 视频"));
         if(attachments.isEmpty()) body.addView(card("现场附件","暂无照片或视频"));
@@ -594,15 +638,15 @@ public class MainActivity extends Activity {
         }
         body.addView(button("查看全部附件（"+attachments.size()+"）",()->showAttachments(r[0])));
         body.addView(sectionTitle("事故内容"));
-        body.addView(card("事故经过",r[7])); body.addView(card("事故分析",r[8])); body.addView(card("事故原因",r[9]));
-        body.addView(card("当下采取措施",r[10])); body.addView(card("未来如何避免",r[11]));
+        body.addView(detailInfoCard("事故经过",r[7],0xFF1769C2)); body.addView(detailInfoCard("事故分析",r[8],0xFF1769C2)); body.addView(detailInfoCard("事故原因",r[9],0xFFC16B35));
+        body.addView(detailInfoCard("当下采取措施",r[10],0xFFD19A24)); body.addView(detailInfoCard("未来如何避免",r[11],0xFF16865B));
         body.addView(sectionTitle("整改跟踪"));
-        body.addView(card("整改负责人",r[12])); body.addView(card("整改期限",r[13]));
+        body.addView(detailInfoCard("整改负责人",r[12],0xFF1769C2)); body.addView(detailInfoCard("整改期限",r[13],0xFF1769C2));
         StringBuilder history=new StringBuilder();
         List<String[]> events=db.statusHistory(r[0]);
         if(events.isEmpty()) history.append("暂无状态变更记录");
         else for(String[] e:events) history.append(e[2]).append("  ").append(e[0]).append(" → ").append(e[1]).append("\n");
-        body.addView(card("整改状态变更记录",history.toString()));
+        body.addView(detailInfoCard("整改状态变更记录",history.toString(),0xFF7C5CE7));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("更新整改状态",()->{
             String[] states={"待整改","整改中","已完成"};
