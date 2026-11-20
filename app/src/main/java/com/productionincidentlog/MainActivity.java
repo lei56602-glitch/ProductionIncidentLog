@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
             public void afterTextChanged(Editable e) {}
         });
         refresh.run(); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        root.addView(button("返回首页",this::dashboard));
+        addBottomNav("记录");
     }
 
     private void editIncident(String[] r) {
@@ -343,13 +343,9 @@ public class MainActivity extends Activity {
             }
         };
         body.addView(button("应用筛选并统计",calculate)); body.addView(result); calculate.run();
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); root.addView(button("返回首页",this::dashboard));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("统计");
     }
 
-    private TextView sectionTitle(String title) {
-        TextView t=new TextView(this); t.setText(title); t.setTextColor(ink); t.setTextSize(18);
-        t.setTypeface(null,Typeface.BOLD); t.setPadding(4,18,4,8); return t;
-    }
     private void addStatisticGroup(LinearLayout target,String heading,List<String[]> rows,int column,String[] categories) {
         target.addView(sectionTitle(heading+"（点击查看明细）"));
         int[] values=new int[categories.length];
@@ -431,7 +427,7 @@ public class MainActivity extends Activity {
                 shareExport(file,"application/pdf");
             } catch(Exception e) { Toast.makeText(this,"PDF 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
         }));
-        root.addView(button("返回首页",this::dashboard));
+        addBottomNav("记录");
     }
 
 
