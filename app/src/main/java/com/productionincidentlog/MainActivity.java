@@ -19,6 +19,7 @@ public class MainActivity extends Activity {
     private final int ink = 0xFF17324D, blue = 0xFF1769AA, bg = 0xFFF2F7FC;
     private List<android.net.Uri> pendingAttachments = new java.util.ArrayList<>();
     private static final int REQUEST_ATTACHMENTS = 4102;
+    private TextView attachmentHint;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); db = new IncidentDb(this); dashboard();
@@ -87,7 +88,7 @@ public class MainActivity extends Activity {
         EditText prevention = field(form,"五、未来如何避免","长期整改和预防措施","",3);
         EditText owner = field(form,"整改负责人","负责推动整改的人","",1);
         EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
-        TextView attachmentHint = new TextView(this); attachmentHint.setText("现场照片 / 视频：可在保存前选择附件"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        attachmentHint = new TextView(this); attachmentHint.setText("现场照片 / 视频：尚未选择"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
         form.addView(button("选择现场照片或视频（可多选）", () -> {
             android.content.Intent pick = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
             pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
@@ -281,6 +282,7 @@ public class MainActivity extends Activity {
         if(requestCode!=REQUEST_ATTACHMENTS || resultCode!=RESULT_OK || data==null) return;
         if(data.getClipData()!=null) { android.content.ClipData clip=data.getClipData(); for(int i=0;i<clip.getItemCount();i++) addPendingAttachment(clip.getItemAt(i).getUri()); }
         else if(data.getData()!=null) addPendingAttachment(data.getData());
+        if (attachmentHint != null) attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个附件");
         Toast.makeText(this,"已选择 "+pendingAttachments.size()+" 个附件",Toast.LENGTH_SHORT).show();
     }
     private void addPendingAttachment(android.net.Uri uri) { if(uri!=null && !pendingAttachments.contains(uri)) pendingAttachments.add(uri); }
