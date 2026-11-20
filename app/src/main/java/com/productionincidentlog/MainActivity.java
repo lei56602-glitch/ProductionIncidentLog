@@ -292,8 +292,7 @@ public class MainActivity extends Activity {
             if("待整改".equals(incident[14])) pendingRows.add(incident);
             else if("整改中".equals(incident[14])) doingRows.add(incident);
             else if("已完成".equals(incident[14])) completedRows.add(incident);
-            if(!"已完成".equals(incident[14]) && incident[13]!=null &&
-                !incident[13].trim().isEmpty() && incident[13].compareTo(today)<0) overdueRows.add(incident);
+            if(isRemediationOverdue(incident[13],incident[14])) overdueRows.add(incident);
         }
         LinearLayout closureTop=new LinearLayout(this);
         closureTop.setOrientation(LinearLayout.HORIZONTAL);
@@ -700,6 +699,17 @@ public class MainActivity extends Activity {
         return panel;
     }
 
+    private boolean isRemediationOverdue(String dueDate,String status) {
+        if("已完成".equals(status) || dueDate==null || dueDate.trim().isEmpty()) return false;
+        try {
+            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+            format.setLenient(false);
+            Date due=format.parse(dueDate);
+            if(due==null || !format.format(due).equals(dueDate)) return false;
+            return dueDate.compareTo(format.format(new Date()))<0;
+        } catch(Exception ignored) { return false; }
+    }
+
     private String remediationDueSummary(String dueDate,String status) {
         if("已完成".equals(status)) return "整改已完成";
         if(dueDate==null || dueDate.trim().isEmpty()) return "未设置整改期限";
@@ -809,7 +819,7 @@ public class MainActivity extends Activity {
         body.addView(detailInfoCard("当下采取措施",r[10],0xFFD19A24)); body.addView(detailInfoCard("未来如何避免",r[11],0xFF16865B));
         body.addView(sectionTitle("整改跟踪"));
         body.addView(detailInfoCard("整改负责人",r[12],0xFF1769C2)); body.addView(detailInfoCard("整改期限",r[13],0xFF1769C2));
-        body.addView(detailInfoCard("期限状态",remediationDueSummary(r[13],r[14]),"已完成".equals(r[14])?0xFF16865B:(r[13]!=null && !r[13].trim().isEmpty() && r[13].compareTo(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()))<0?0xFFC43B36:0xFF1769C2)));
+        body.addView(detailInfoCard("期限状态",remediationDueSummary(r[13],r[14]),"已完成".equals(r[14])?0xFF16865B:(isRemediationOverdue(r[13],r[14])?0xFFC43B36:0xFF1769C2)));
         StringBuilder history=new StringBuilder();
         List<String[]> events=db.statusHistory(r[0]);
         if(events.isEmpty()) history.append("暂无状态变更记录");
@@ -1103,7 +1113,7 @@ public class MainActivity extends Activity {
             String todayStatus=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
             List<String[]> rows=new java.util.ArrayList<>();
             for(String[] incident:fetchedRows) {
-                boolean overdue=!"已完成".equals(incident[14]) && incident[13]!=null && !incident[13].trim().isEmpty() && incident[13].compareTo(todayStatus)<0;
+                boolean overdue=isRemediationOverdue(incident[13],incident[14]);
                 if("已逾期".equals(statusChoice)) { if(overdue) rows.add(incident); }
                 else if("全部状态".equals(statusChoice) || statusChoice.equals(incident[14])) rows.add(incident);
             }
