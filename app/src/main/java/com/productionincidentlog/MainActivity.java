@@ -980,7 +980,7 @@ public class MainActivity extends Activity {
             }
             List<String[]> rows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             TextView totalCard=new TextView(this);
-            totalCard.setText("本月事故总数\\n"+rows.size()+" 起   ·   点击查看明细");
+            totalCard.setText("筛选事故总数\n"+rows.size()+" 起   ·   点击查看明细");
             totalCard.setTextColor(0xFF1556A8);
             totalCard.setTextSize(18);
             totalCard.setTypeface(null,Typeface.BOLD);
