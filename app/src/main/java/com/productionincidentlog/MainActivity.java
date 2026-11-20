@@ -104,14 +104,15 @@ public class MainActivity extends Activity {
         } catch(Exception e) { return false; }
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
-        TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
-        EditText e = new EditText(this); e.setHint(hint); e.setText(initial); e.setMinLines(lines);
-        e.setTextSize(16); e.setPadding(12,8,12,8); e.setBackgroundColor(-1); box.addView(e); return e;
+        TextView l=new TextView(this); l.setText(label); l.setTextColor(ink); l.setTypeface(null,Typeface.BOLD); l.setTextSize(14); l.setPadding(2,12,2,5); box.addView(l);
+        EditText e=new EditText(this); e.setHint(hint); e.setText(initial); e.setMinLines(lines); e.setTextSize(15); e.setTextColor(ink);
+        e.setPadding(14,10,14,10); e.setBackground(rounded(0xFFFFFFFF,15)); e.setElevation(1);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,5); box.addView(e,p); return e;
     }
     private Spinner spinner(LinearLayout box, String label, List<String> values) {
-        TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
-        Spinner s = new Spinner(this);
-        s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values)); box.addView(s); return s;
+        if(label!=null && !label.isEmpty()){TextView l=new TextView(this);l.setText(label);l.setTextColor(ink);l.setTypeface(null,Typeface.BOLD);l.setTextSize(14);l.setPadding(2,12,2,5);box.addView(l);}
+        Spinner s=new Spinner(this); s.setPadding(8,5,8,5); s.setBackground(rounded(0xFFFFFFFF,14));
+        s.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,values)); box.addView(s); return s;
     }
     private static class IncidentDraft {
         String date,team,area,type,equipment,people,description,analysis,cause,action,prevention,owner,dueDate;
