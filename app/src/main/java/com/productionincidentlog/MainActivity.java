@@ -537,7 +537,6 @@ public class MainActivity extends Activity {
             String period=timeFilter.getSelectedItem().toString();
             String typeChoice=typeFilter.getSelectedItem().toString();
             String statusChoice=statusFilter.getSelectedItem().toString();
-            String todayFilter=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
             String areaChoice=areaFilter.getSelectedItem().toString();
             String teamChoice=teamFilter.getSelectedItem().toString();
             String deviceChoice=deviceFilter.getSelectedItem().toString();
@@ -556,7 +555,7 @@ public class MainActivity extends Activity {
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
                 if("已逾期".equals(statusChoice)) {
-                    if("已完成".equals(r[14]) || r[13]==null || r[13].trim().isEmpty() || r[13].compareTo(todayFilter)>=0) continue;
+                    if(!isRemediationOverdue(r[13],r[14])) continue;
                 } else if(!"全部状态".equals(statusChoice) && !statusChoice.equals(r[14])) continue;
                 if(!"全部区域".equals(areaChoice) && !areaChoice.equals(r[3])) continue;
                 if(!"全部班组".equals(teamChoice) && !teamChoice.equals(r[2])) continue;
@@ -585,9 +584,7 @@ public class MainActivity extends Activity {
                     ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
                 top.addView(status);
                 item.addView(top);
-                if(!"已完成".equals(r[14]) && r[13]!=null && !r[13].trim().isEmpty()) {
-                    String todayText=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
-                    if(r[13].compareTo(todayText)<0) {
+                if(isRemediationOverdue(r[13],r[14])) {
                         TextView overdue=new TextView(this);
                         overdue.setText("逾期整改 · 截止 "+r[13]);
                         overdue.setTextColor(0xFFC43B36);
@@ -598,7 +595,6 @@ public class MainActivity extends Activity {
                         LinearLayout.LayoutParams overdueLp=new LinearLayout.LayoutParams(-2,-2);
                         overdueLp.setMargins(0,6,0,0);
                         item.addView(overdue,overdueLp);
-                    }
                 }
                 TextView meta=new TextView(this);
                 meta.setText(occurred+"  ·  "+r[2]+"  ·  "+r[3]);
