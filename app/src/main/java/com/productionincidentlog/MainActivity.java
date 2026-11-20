@@ -117,6 +117,14 @@ public class MainActivity extends Activity {
         body.addView(sectionTitle("常用功能")); body.addView(button("＋ 登记新事故",this::incidentForm)); body.addView(button("事故档案",this::records)); body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("首页");
     }
+    private boolean validIncidentDate(String value) {
+        if(value==null || value.trim().isEmpty()) return false;
+        try {
+            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US);
+            format.setLenient(false);
+            return format.format(format.parse(value.trim())).equals(value.trim());
+        } catch(Exception e) { return false; }
+    }
     private boolean validDueDate(String value) {
         if(value==null || value.trim().isEmpty()) return true;
         try {
@@ -184,7 +192,7 @@ public class MainActivity extends Activity {
         }));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("下一步：事故分析",()->{
-            if(date.getText().toString().trim().isEmpty()){Toast.makeText(this,"请填写发生时间",Toast.LENGTH_SHORT).show();return;}
+            if(!validIncidentDate(date.getText().toString())){Toast.makeText(this,"发生时间格式错误，请使用 yyyy-MM-dd HH:mm",Toast.LENGTH_SHORT).show();return;}
             draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
             draft.type=types[selectedType[0]]; draft.equipment=equipment.getSelectedItem().toString(); draft.people=people.getText().toString().trim();
             draft.attachments=new java.util.ArrayList<>(pendingAttachments); incidentAnalysis(draft);
@@ -338,10 +346,10 @@ public class MainActivity extends Activity {
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("保存修改",() -> {
             String d=date.getText().toString().trim();
-            if(d.isEmpty() || description.getText().toString().trim().isEmpty() || analysis.getText().toString().trim().isEmpty()
+            if(!validIncidentDate(d) || description.getText().toString().trim().isEmpty() || analysis.getText().toString().trim().isEmpty()
                 || cause.getText().toString().trim().isEmpty() || action.getText().toString().trim().isEmpty()
                 || prevention.getText().toString().trim().isEmpty()) {
-                Toast.makeText(this,"请填写发生时间及五项事故内容",Toast.LENGTH_LONG).show(); return;
+                Toast.makeText(this,"请填写正确的发生时间（yyyy-MM-dd HH:mm）及五项事故内容",Toast.LENGTH_LONG).show(); return;
             }
             if(!validDueDate(dueDate.getText().toString())) {
                 Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show(); return;
