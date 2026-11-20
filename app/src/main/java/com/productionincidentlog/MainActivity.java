@@ -1025,19 +1025,24 @@ public class MainActivity extends Activity {
             final int index=option;
             TextView choice=new TextView(this);
             reportCards[option]=choice;
-            choice.setText((option==0?"▣":option==1?"▣":"▦")+"   "+reportTitles[option]+"\n       "+reportSubtitles[option]+"\n");
+            choice.setText((option==2?"🟩":"🟥")+"   "+reportTitles[option]+"\n       "+reportSubtitles[option]+"\n       "+(option==0?"◉":"○"));
             choice.setTextColor(ink);
             choice.setTextSize(14);
             choice.setTypeface(null,Typeface.BOLD);
-            choice.setPadding(15,13,12,13);
+            choice.setPadding(15,15,12,15);
+            android.graphics.drawable.GradientDrawable initial=rounded(option==0?0xFFE7F0FF:0xFFFFFFFF,16);
+            initial.setStroke(option==0?2:1,option==0?blue:0xFFDCE5F0);
+            choice.setBackground(initial);
             LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(-1,-2);
             op.setMargins(2,4,2,4);
             reportOptions.addView(choice,op);
             choice.setOnClickListener(v->{
                 reportChoice[0]=index;
                 for(int k=0;k<3;k++){
-                    reportCards[k].setBackground(rounded(k==index?0xFFE7F0FF:0xFFFFFFFF,16));
-                    reportCards[k].setCompoundDrawables(null,null,null,null);
+                    android.graphics.drawable.GradientDrawable selectedBg=rounded(k==index?0xFFE7F0FF:0xFFFFFFFF,16);
+                    selectedBg.setStroke(k==index?2:1,k==index?blue:0xFFDCE5F0);
+                    reportCards[k].setBackground(selectedBg);
+                    reportCards[k].setText((k==2?"🟩":"🟥")+"   "+reportTitles[k]+"\n       "+reportSubtitles[k]+"\n       "+(k==index?"◉":"○"));
                     reportCards[k].setTextColor(k==index?blue:ink);
                 }
                 if(index==0){
@@ -1071,7 +1076,6 @@ public class MainActivity extends Activity {
         reportBody.addView(sectionTitle("导出说明"));
         reportBody.addView(card("支持条件导出","可按班组、区域、事故类型、设备及自定义日期范围筛选"));
         root.addView(reportScroll,new LinearLayout.LayoutParams(-1,0,1));
-        addBottomNav("记录");
     }
 
 
