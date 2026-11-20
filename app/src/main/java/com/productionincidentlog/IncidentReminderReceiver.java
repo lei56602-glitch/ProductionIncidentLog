@@ -17,6 +17,7 @@ public class IncidentReminderReceiver extends BroadcastReceiver {
     private static final String CHANNEL="incident_reminders";
     @Override public void onReceive(Context context,Intent intent) {
         IncidentReminderScheduler.schedule(context);
+        if(Build.VERSION.SDK_INT>=33 && context.checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED) return;
         String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
         IncidentDb db=new IncidentDb(context);
         try {
