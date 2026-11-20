@@ -477,30 +477,61 @@ public class MainActivity extends Activity {
         }
         zip.closeEntry();
     }
+    private String sha256(java.io.File file) throws Exception {
+        java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
+        try(java.io.InputStream in=new java.io.FileInputStream(file)) {
+            byte[] buffer=new byte[8192]; int n;
+            while((n=in.read(buffer))>0) digest.update(buffer,0,n);
+        }
+        StringBuilder out=new StringBuilder();
+        for(byte b:digest.digest()) out.append(String.format(Locale.US,"%02x",b&0xff));
+        return out.toString();
+    }
+    private long[] attachmentStats(java.io.File dir) {
+        long count=0,bytes=0;
+        java.io.File[] children=dir.listFiles();
+        if(children!=null) for(java.io.File child:children) {
+            if(child.isDirectory()) {
+                long[] sub=attachmentStats(child); count+=sub[0]; bytes+=sub[1];
+            } else { count++; bytes+=child.length(); }
+        }
+        return new long[]{count,bytes};
+    }
+    private void writeZipText(java.util.zip.ZipOutputStream zip,String name,String value) throws java.io.IOException {
+        zip.putNextEntry(new java.util.zip.ZipEntry(name));
+        zip.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        zip.closeEntry();
+    }
     private void exportBackup(android.net.Uri destination) {
+        boolean closed=false;
         try {
             String ownAuthority=getPackageName()+".fileprovider";
             for(String[] attachment:db.allAttachments()) {
-                android.net.Uri old=android.net.Uri.parse(attachment[1]);
-                if(ownAuthority.equals(old.getAuthority())) continue;
-                String newUri=copyAttachmentToPrivate(old,attachment[0],attachment[2]);
+                android.net.Uri oldUri=android.net.Uri.parse(attachment[1]);
+                if(ownAuthority.equals(oldUri.getAuthority())) continue;
+                String newUri=copyAttachmentToPrivate(oldUri,attachment[0],attachment[2]);
                 db.updateAttachmentUri(attachment[0],attachment[1],newUri);
             }
             db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
-            db.close();
+            db.close(); closed=true;
+            java.io.File database=getDatabasePath("production_incidents.db");
+            if(!database.isFile()) throw new java.io.IOException("数据库文件不存在，无法备份");
+            long[] stats=attachmentStats(attachmentDirectory());
+            String manifest="{\"format_version\":1,\"database\":\"production_incidents.db\",\"database_sha256\":\""+sha256(database)+"\",\"attachment_file_count\":"+stats[0]+",\"attachment_total_bytes\":"+stats[1]+"}";
             java.io.OutputStream raw=getContentResolver().openOutputStream(destination);
             if(raw==null) throw new java.io.IOException("无法创建目标备份文件");
             try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(raw)) {
-                zipFile(zip,getDatabasePath("production_incidents.db"),"production_incidents.db");
+                zipFile(zip,database,"production_incidents.db");
                 java.io.File[] dirs=attachmentDirectory().listFiles();
                 if(dirs!=null) for(java.io.File dir:dirs)
                     zipFile(zip,dir,"attachments/"+dir.getName()+(dir.isDirectory()?"/":""));
+                writeZipText(zip,"backup_manifest.json",manifest);
             }
-            db=new IncidentDb(this);
-            Toast.makeText(this,"备份完成：事故档案、整改历史及照片/视频已打包",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"备份完成：已生成 SHA-256 校验清单，附件 "+stats[0]+" 个",Toast.LENGTH_LONG).show();
         } catch(Exception e) {
-            db=new IncidentDb(this);
             Toast.makeText(this,"备份失败："+e.getMessage(),Toast.LENGTH_LONG).show();
+        } finally {
+            if(closed) { db=new IncidentDb(this); }
         }
     }
     private void deleteTree(java.io.File file) {
@@ -528,26 +559,31 @@ public class MainActivity extends Activity {
     }
     private void restoreBackup(android.net.Uri source) {
         java.io.File temp=new java.io.File(getCacheDir(),"incident_restore");
-        deleteTree(temp); temp.mkdirs();
+        deleteTree(temp);
+        if(!temp.mkdirs()) { Toast.makeText(this,"无法创建临时恢复目录",Toast.LENGTH_LONG).show(); return; }
+        java.io.File safety=new java.io.File(temp,"safety");
+        boolean databaseSnapshot=false,attachmentsSnapshot=false,dbClosed=false;
         try {
-            android.net.Uri uri=source;
-            try(java.io.InputStream raw=getContentResolver().openInputStream(uri)) {
+            try(java.io.InputStream raw=getContentResolver().openInputStream(source)) {
                 if(raw==null) throw new java.io.IOException("无法读取备份文件");
                 try(java.util.zip.ZipInputStream zip=new java.util.zip.ZipInputStream(raw)) {
                     java.util.zip.ZipEntry entry; int count=0; long total=0;
+                    java.util.HashSet<String> names=new java.util.HashSet<>();
                     while((entry=zip.getNextEntry())!=null) {
-                        if(++count>5000) throw new java.io.IOException("备份文件条目过多");
+                        if(++count>5005) throw new java.io.IOException("备份文件条目过多");
                         String name=entry.getName();
-                        if(name.startsWith("/") || name.contains("..") || name.contains("\\") ||
-                            !(name.equals("production_incidents.db") || name.startsWith("attachments/")))
+                        if(!names.add(name)) throw new java.io.IOException("备份文件包含重复条目");
+                        boolean allowed=name.equals("production_incidents.db") || name.equals("backup_manifest.json") || name.startsWith("attachments/");
+                        if(name.startsWith("/") || name.contains("..") || name.contains("\\") || !allowed)
                             throw new java.io.IOException("备份文件路径不合法");
                         java.io.File out=new java.io.File(temp,name);
                         if(!out.getCanonicalPath().startsWith(temp.getCanonicalPath()+java.io.File.separator))
                             throw new java.io.IOException("备份文件路径越界");
-                        if(entry.isDirectory()) out.mkdirs();
-                        else {
+                        if(entry.isDirectory()) {
+                            if(!out.exists() && !out.mkdirs()) throw new java.io.IOException("无法创建备份目录");
+                        } else {
                             java.io.File parent=out.getParentFile();
-                            if(parent!=null) parent.mkdirs();
+                            if(parent!=null && !parent.exists() && !parent.mkdirs()) throw new java.io.IOException("无法创建备份目录");
                             try(java.io.OutputStream stream=new java.io.FileOutputStream(out)) {
                                 byte[] buffer=new byte[8192]; int n;
                                 while((n=zip.read(buffer))>0) {
@@ -562,32 +598,91 @@ public class MainActivity extends Activity {
                 }
             }
             java.io.File restoredDb=new java.io.File(temp,"production_incidents.db");
-            if(!restoredDb.isFile()) throw new java.io.IOException("备份中没有数据库文件");
+            java.io.File manifestFile=new java.io.File(temp,"backup_manifest.json");
+            if(!restoredDb.isFile() || !manifestFile.isFile()) throw new java.io.IOException("备份缺少数据库或校验清单；旧格式备份暂不支持直接恢复");
+            StringBuilder manifestText=new StringBuilder();
+            try(java.io.BufferedReader reader=new java.io.BufferedReader(new java.io.InputStreamReader(
+                    new java.io.FileInputStream(manifestFile),java.nio.charset.StandardCharsets.UTF_8))) {
+                String line; while((line=reader.readLine())!=null) manifestText.append(line);
+            }
+            org.json.JSONObject manifest=new org.json.JSONObject(manifestText.toString());
+            if(manifest.optInt("format_version",-1)!=1 || !"production_incidents.db".equals(manifest.optString("database")))
+                throw new java.io.IOException("备份格式版本不受支持");
+            String expectedHash=manifest.optString("database_sha256","");
+            if(!expectedHash.matches("[0-9a-f]{64}") || !expectedHash.equals(sha256(restoredDb)))
+                throw new java.io.IOException("数据库 SHA-256 校验失败，备份可能已损坏");
+            java.io.File restoredAttachments=new java.io.File(temp,"attachments");
+            if(!restoredAttachments.exists() && !restoredAttachments.mkdirs()) throw new java.io.IOException("附件目录缺失");
+            long[] stats=attachmentStats(restoredAttachments);
+            if(stats[0]!=manifest.optLong("attachment_file_count",-1) || stats[1]!=manifest.optLong("attachment_total_bytes",-1))
+                throw new java.io.IOException("附件数量或总大小校验失败，拒绝恢复");
             android.database.sqlite.SQLiteDatabase check=android.database.sqlite.SQLiteDatabase.openDatabase(
                 restoredDb.getAbsolutePath(),null,android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
-            try(android.database.Cursor cursor=check.rawQuery("PRAGMA integrity_check",null)) {
-                if(!cursor.moveToFirst() || !"ok".equalsIgnoreCase(cursor.getString(0)))
-                    throw new java.io.IOException("数据库完整性检查未通过");
+            try {
+                try(android.database.Cursor cursor=check.rawQuery("PRAGMA integrity_check",null)) {
+                    if(!cursor.moveToFirst() || !"ok".equalsIgnoreCase(cursor.getString(0)))
+                        throw new java.io.IOException("数据库完整性检查未通过");
+                }
+                try(android.database.Cursor cursor=check.rawQuery("SELECT COUNT(*) FROM incidents",null)) {
+                    if(!cursor.moveToFirst()) throw new java.io.IOException("数据库缺少事故数据表");
+                }
+                try(android.database.Cursor cursor=check.rawQuery("SELECT COUNT(*) FROM incident_attachments",null)) {
+                    if(!cursor.moveToFirst()) throw new java.io.IOException("数据库附件表结构不完整");
+                }
             } finally { check.close(); }
-            db.close();
+
+            if(!safety.mkdirs()) throw new java.io.IOException("无法创建恢复回滚目录");
+            db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            db.close(); dbClosed=true;
             java.io.File current=getDatabasePath("production_incidents.db");
+            if(!current.isFile()) throw new java.io.IOException("本机数据库不存在，无法创建恢复回滚点");
+            copyFile(current,new java.io.File(safety,"current.db")); databaseSnapshot=true;
+            copyTree(attachmentDirectory(),new java.io.File(safety,"attachments")); attachmentsSnapshot=true;
+
+            java.io.File stagedDb=new java.io.File(getFilesDir(),"production_incidents.restore.db");
+            java.io.File stagedAttachments=new java.io.File(getFilesDir(),"incident_attachments.restore");
+            java.io.File attachmentRoot=attachmentDirectory();
+            deleteTree(stagedDb); deleteTree(stagedAttachments);
+            copyFile(restoredDb,stagedDb);
+            copyTree(restoredAttachments,stagedAttachments);
             new java.io.File(current.getPath()+"-wal").delete();
             new java.io.File(current.getPath()+"-shm").delete();
-            current.delete();
-            copyFile(restoredDb,current);
-            java.io.File attachmentRoot=attachmentDirectory();
-            deleteTree(attachmentRoot); attachmentRoot.mkdirs();
-            java.io.File restoredAttachments=new java.io.File(temp,"attachments");
-            if(restoredAttachments.exists()) copyTree(restoredAttachments,attachmentRoot);
-            db=new IncidentDb(this);
-            db.getReadableDatabase();
+            if(current.exists() && !current.delete()) throw new java.io.IOException("无法替换本机数据库");
+            if(!stagedDb.renameTo(current)) throw new java.io.IOException("新数据库安装失败");
+            java.io.File oldAttachments=new java.io.File(getFilesDir(),"incident_attachments.previous");
+            deleteTree(oldAttachments);
+            if(attachmentRoot.exists() && !attachmentRoot.renameTo(oldAttachments))
+                throw new java.io.IOException("无法切换附件目录");
+            if(!stagedAttachments.renameTo(attachmentRoot))
+                throw new java.io.IOException("新附件目录安装失败");
+            deleteTree(oldAttachments);
+            db=new IncidentDb(this); db.getReadableDatabase(); dbClosed=false;
             deleteTree(temp);
-            Toast.makeText(this,"恢复完成：数据库完整性检查通过，事故档案和附件已恢复",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"恢复完成：数据库哈希、附件清单及完整性均校验通过",Toast.LENGTH_LONG).show();
             dashboard();
         } catch(Exception e) {
-            if(db==null) db=new IncidentDb(this);
+            if(dbClosed) {
+                try {
+                    if(db!=null) db.close();
+                    java.io.File current=getDatabasePath("production_incidents.db");
+                    if(databaseSnapshot && new java.io.File(safety,"current.db").isFile()) {
+                        new java.io.File(current.getPath()+"-wal").delete();
+                        new java.io.File(current.getPath()+"-shm").delete();
+                        copyFile(new java.io.File(safety,"current.db"),current);
+                    }
+                    java.io.File activeAttachments=new java.io.File(getFilesDir(),"incident_attachments");
+                    if(attachmentsSnapshot && new java.io.File(safety,"attachments").exists()) {
+                        deleteTree(activeAttachments);
+                        copyTree(new java.io.File(safety,"attachments"),activeAttachments);
+                    }
+                } catch(Exception rollbackError) {
+                    e.addSuppressed(rollbackError);
+                }
+                db=new IncidentDb(this);
+                try { db.getReadableDatabase(); } catch(Exception ignored) {}
+            }
             deleteTree(temp);
-            Toast.makeText(this,"恢复失败："+e.getMessage(),Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"恢复失败，已尝试保留并回滚原有数据："+e.getMessage(),Toast.LENGTH_LONG).show();
         }
     }
 
