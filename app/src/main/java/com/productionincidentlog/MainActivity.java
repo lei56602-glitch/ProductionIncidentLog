@@ -160,7 +160,7 @@ public class MainActivity extends Activity {
                     .setPositiveButton("确认删除",(dialog,which) -> {
                         db.deleteIncident(r[0]);
                         Toast.makeText(this,"事故档案已删除",Toast.LENGTH_SHORT).show();
-                        refresh.run();
+                        records();
                     }).show()));
             }
             if (rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
