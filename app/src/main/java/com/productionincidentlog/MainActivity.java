@@ -1557,6 +1557,14 @@ public class MainActivity extends Activity {
                 video.setGravity(android.view.Gravity.CENTER);
                 video.setTextColor(blue);
                 video.setBackground(rounded(0xFFE5F0FF,14));
+                video.setOnClickListener(v->{
+                    try {
+                        android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                        view.setDataAndType(uri,mime==null?"video/*":mime);
+                        view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(view);
+                    } catch(Exception e) { Toast.makeText(this,"无法预览视频",Toast.LENGTH_SHORT).show(); }
+                });
                 LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
                 p.setMargins(3,4,7,5); attachmentPreview.addView(video,p);
             }
