@@ -281,6 +281,40 @@ public class MainActivity extends Activity {
         }
         overview.addView(overviewTop); overview.addView(overviewBottom);
         body.addView(overview);
+        body.addView(sectionTitle("整改闭环"));
+        List<String[]> allIncidents=db.incidents("");
+        List<String[]> pendingRows=new java.util.ArrayList<>();
+        List<String[]> doingRows=new java.util.ArrayList<>();
+        List<String[]> completedRows=new java.util.ArrayList<>();
+        List<String[]> overdueRows=new java.util.ArrayList<>();
+        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+        for(String[] incident:allIncidents) {
+            if("待整改".equals(incident[14])) pendingRows.add(incident);
+            else if("整改中".equals(incident[14])) doingRows.add(incident);
+            else if("已完成".equals(incident[14])) completedRows.add(incident);
+            if(!"已完成".equals(incident[14]) && incident[13]!=null &&
+                !incident[13].trim().isEmpty() && incident[13].compareTo(today)<0) overdueRows.add(incident);
+        }
+        LinearLayout closureTop=new LinearLayout(this);
+        closureTop.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout closureBottom=new LinearLayout(this);
+        closureBottom.setOrientation(LinearLayout.HORIZONTAL);
+        TextView pendingTile=dashboardMetric("◷","待整改",pendingRows.size(),0xFFEAF2FF);
+        TextView doingTile=dashboardMetric("↻","整改中",doingRows.size(),0xFFFFF3DF);
+        TextView completedTile=dashboardMetric("✓","已完成",completedRows.size(),0xFFE5F6EC);
+        TextView overdueTile=dashboardMetric("!","已逾期",overdueRows.size(),0xFFFFE9E7);
+        pendingTile.setOnClickListener(v->showFilteredRecords("待整改",pendingRows));
+        doingTile.setOnClickListener(v->showFilteredRecords("整改中",doingRows));
+        completedTile.setOnClickListener(v->showFilteredRecords("已完成",completedRows));
+        overdueTile.setOnClickListener(v->showFilteredRecords("逾期整改",overdueRows));
+        for(TextView tile:new TextView[]{pendingTile,doingTile}) {
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(3,4,3,4);closureTop.addView(tile,p);
+        }
+        for(TextView tile:new TextView[]{completedTile,overdueTile}) {
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);p.setMargins(3,4,3,4);closureBottom.addView(tile,p);
+        }
+        LinearLayout closure=new LinearLayout(this);closure.setOrientation(LinearLayout.VERTICAL);
+        closure.addView(closureTop);closure.addView(closureBottom);body.addView(closure);
         // Keep the dashboard focused on the reference layout; reminders and reports remain available from their dedicated pages.
 
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
