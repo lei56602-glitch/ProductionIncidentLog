@@ -40,57 +40,59 @@ public class MainActivity extends Activity {
         Toast.makeText(this,"已检查整改期限；如有逾期或临期任务，将显示系统通知",Toast.LENGTH_LONG).show();
     }
 
+    private android.graphics.drawable.GradientDrawable rounded(int color,int radius) {
+        android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable(); d.setColor(color); d.setCornerRadius(radius); return d;
+    }
+    private TextView sectionTitle(String value) {
+        TextView t=new TextView(this); t.setText(value); t.setTextSize(17); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD); t.setPadding(4,16,4,8); return t;
+    }
     private void page(String title) {
-        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(18,18,18,18); root.setBackgroundColor(bg);
-        TextView h = new TextView(this); h.setText(title); h.setTextSize(23);
-        h.setTextColor(ink); h.setTypeface(null, Typeface.BOLD); h.setPadding(4,12,4,18);
-        root.addView(h); setContentView(root);
+        root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(14,0,14,10); root.setBackgroundColor(bg);
+        LinearLayout header=new LinearLayout(this); header.setGravity(android.view.Gravity.CENTER_VERTICAL); header.setPadding(10,14,10,14); header.setBackground(rounded(0xFF0866D8,24));
+        TextView h=new TextView(this); h.setText(title); h.setTextSize(21); h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
+        header.addView(h,new LinearLayout.LayoutParams(0,-2,1)); root.addView(header,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
+        getWindow().setStatusBarColor(0xFF0759C5); getWindow().setNavigationBarColor(0xFFF7FAFE);
     }
-    private Button button(String text, Runnable run) {
-        Button b = new Button(this); b.setText(text); b.setAllCaps(false); b.setTextColor(blue);
-        b.setOnClickListener(v -> run.run()); return b;
+    private Button button(String text,Runnable run) {
+        Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextColor(0xFFFFFFFF); b.setTextSize(15); b.setTypeface(null,Typeface.BOLD);
+        b.setPadding(12,8,12,8); b.setBackground(rounded(0xFF1677EB,18)); b.setElevation(2);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,5,0,5); b.setLayoutParams(lp); b.setOnClickListener(v->run.run()); return b;
     }
-    private TextView card(String title, String value) {
-        TextView t = new TextView(this); t.setText(title + "\n" + value); t.setTextSize(17);
-        t.setTextColor(ink); t.setPadding(18,18,18,18); t.setBackgroundColor(-1);
-        return t;
+    private TextView card(String title,String value) {
+        TextView t=new TextView(this); t.setText(title+"\\n"+value); t.setTextSize(16); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD);
+        t.setPadding(16,16,16,16); t.setBackground(rounded(0xFFFFFFFF,22)); t.setElevation(2); return t;
     }
-    private boolean validDueDate(String value) {
-        if(value==null || value.trim().isEmpty()) return true;
-        try {
-            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
-            format.setLenient(false);
-            return format.format(format.parse(value.trim())).equals(value.trim());
-        } catch(Exception e) { return false; }
+    private void addBottomNav(String selected) {
+        LinearLayout nav=new LinearLayout(this); nav.setGravity(android.view.Gravity.CENTER); nav.setBackground(rounded(0xFFFFFFFF,20)); nav.setPadding(3,5,3,5);
+        String[] labels={"首页","记录","统计","我的"}; Runnable[] actions={this::dashboard,this::records,this::statistics,this::settingsCenter};
+        for(int i=0;i<labels.length;i++){ final int index=i; TextView item=new TextView(this); item.setText(labels[i]); item.setGravity(android.view.Gravity.CENTER);
+            item.setTextSize(12); item.setTypeface(null,Typeface.BOLD); item.setTextColor(labels[i].equals(selected)?0xFF126FE5:0xFF8392A5); item.setPadding(4,9,4,9);
+            nav.addView(item,new LinearLayout.LayoutParams(0,-2,1)); item.setOnClickListener(v->actions[index].run()); }
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,8,0,0); root.addView(nav,lp);
     }
-
     private void dashboard() {
-        page("生产事故管理");
-        TextView sub = new TextView(this); sub.setText("现场事故登记 · 整改跟踪 · 数据统计");
-        sub.setTextColor(0xFF60758A); root.addView(sub);
-        LinearLayout counts = new LinearLayout(this); counts.setOrientation(LinearLayout.HORIZONTAL);
-        counts.addView(card("事故总数", ""+db.countAll()), new LinearLayout.LayoutParams(0,-2,1));
-        counts.addView(card("待整改", ""+db.countStatus("待整改")), new LinearLayout.LayoutParams(0,-2,1));
-        root.addView(counts);
-        String today = new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
-        List<String[]> overdue = db.incidentsDue(today,0,true);
-        List<String[]> upcoming = db.incidentsDue(today,7,false);
-        root.addView(card("逾期未完成整改",db.countOverdue(today)+" 起"));
-        if(!overdue.isEmpty()) root.addView(button("查看逾期事故（"+overdue.size()+"）",() -> showFilteredRecords("逾期未完成整改",overdue)));
-        if(!upcoming.isEmpty()) root.addView(button("未来 7 天到期（"+upcoming.size()+"）",() -> showFilteredRecords("未来 7 天到期整改",upcoming)));
-        root.addView(card("设备损伤", db.countType("设备损伤")+" 起"));
-        root.addView(card("物料混料", db.countType("物料混料")+" 起"));
-        root.addView(card("人员受伤", db.countType("人员受伤")+" 起"));
-        root.addView(button("＋ 登记新事故", this::incidentForm));
-        root.addView(button("事故档案", this::records));
-        root.addView(button("设备档案管理", this::equipment));
-        root.addView(button("统计概览", this::statistics));
-        root.addView(button("事故报表中心（Excel / PDF）", this::exportCenter));
-        root.addView(button("备份全部数据（含照片 / 视频）",this::startBackup));
-        root.addView(button("从备份恢复数据",this::chooseRestore));
-        root.addView(button("立即检查整改提醒",this::checkRemindersNow));
-        root.addView(button("检查照片 / 视频附件完整性",this::checkAttachmentIntegrity));
+        page("生产事故管理系统");
+        ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        TextView hero=new TextView(this); hero.setText("生产事故管理系统\\n记录事故 · 分析原因 · 闭环整改"); hero.setTextColor(0xFFFFFFFF);
+        hero.setTextSize(22); hero.setTypeface(null,Typeface.BOLD); hero.setPadding(22,34,22,34); hero.setBackground(rounded(0xFF145FC4,24)); hero.setElevation(3); body.addView(hero);
+        body.addView(sectionTitle("快速登记"));
+        LinearLayout quick=new LinearLayout(this); quick.setOrientation(LinearLayout.HORIZONTAL); String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
+        for(int i=0;i<types.length;i++){ final String chosen=types[i]; TextView tile=new TextView(this); tile.setText(types[i]+"\\n记录"); tile.setGravity(android.view.Gravity.CENTER);
+            tile.setTextColor(ink); tile.setTextSize(15); tile.setTypeface(null,Typeface.BOLD); tile.setPadding(6,20,6,20); tile.setBackground(rounded(colors[i],18));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); quick.addView(tile,p); tile.setOnClickListener(v->incidentForm(chosen)); }
+        body.addView(quick); body.addView(button("▥  数据统计 · 查询分析",this::statistics)); body.addView(sectionTitle("本月概况"));
+        String month=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
+        List<String[]> monthly=db.incidentsFiltered(month+"-01",month+"-31","全部班组","全部区域","全部类型","全部设备");
+        body.addView(card("本月事故总数",monthly.size()+" 起"));
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); String[] names={"设备损伤","物料混料","人员受伤"};
+        for(String name:names){ int n=0; for(String[] r:monthly) if(name.equals(r[4])) n++; TextView t=card(name,n+" 起"); LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); row.addView(t,p); }
+        body.addView(row); body.addView(sectionTitle("整改提醒"));
+        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()); List<String[]> overdue=db.incidentsDue(today,0,true); List<String[]> upcoming=db.incidentsDue(today,7,false);
+        body.addView(card("逾期未完成整改",db.countOverdue(today)+" 起"));
+        if(!overdue.isEmpty()) body.addView(button("查看逾期事故（"+overdue.size()+"）",()->showFilteredRecords("逾期未完成整改",overdue)));
+        if(!upcoming.isEmpty()) body.addView(button("未来 7 天到期（"+upcoming.size()+"）",()->showFilteredRecords("未来 7 天到期整改",upcoming)));
+        body.addView(sectionTitle("常用功能")); body.addView(button("＋ 登记新事故",this::incidentForm)); body.addView(button("事故档案",this::records)); body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("首页");
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
@@ -102,7 +104,8 @@ public class MainActivity extends Activity {
         Spinner s = new Spinner(this);
         s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values)); box.addView(s); return s;
     }
-    private void incidentForm() {
+    private void incidentForm() { incidentForm(null); }
+    private void incidentForm(String presetType) {
         pendingAttachments = new java.util.ArrayList<>();
         page("登记生产事故");
         ScrollView scroll = new ScrollView(this);
@@ -112,6 +115,7 @@ public class MainActivity extends Activity {
         Spinner team = spinner(form,"班组",java.util.Arrays.asList("A班","B班"));
         Spinner area = spinner(form,"发生区域",java.util.Arrays.asList("造粒","仓库"));
         Spinner type = spinner(form,"事故类型",java.util.Arrays.asList("设备损伤","物料混料","人员受伤"));
+        if(presetType!=null) type.setSelection(Math.max(0,java.util.Arrays.asList("设备损伤","物料混料","人员受伤").indexOf(presetType)));
         List<String> equipmentNames = db.equipmentNames();
         if (equipmentNames.isEmpty()) equipmentNames.add("未指定");
         Spinner equipment = spinner(form,"设备名称（从设备档案选择）",equipmentNames);
@@ -263,6 +267,14 @@ public class MainActivity extends Activity {
         root.addView(button("取消返回档案",this::records));
     }
 
+    private void settingsCenter() {
+        page("设置中心"); ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        body.addView(button("设备管理",this::equipment)); body.addView(button("数据备份（含照片 / 视频）",this::startBackup));
+        body.addView(button("从备份恢复数据",this::chooseRestore)); body.addView(button("立即检查整改提醒",this::checkRemindersNow));
+        body.addView(button("检查照片 / 视频附件完整性",this::checkAttachmentIntegrity));
+        body.addView(card("关于我们","生产事故管理系统 · 本地 SQLite 数据存储"));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("我的");
+    }
     private void equipment() {
         page("设备档案管理");
         TextView note = new TextView(this); note.setText("事故登记时从统一设备档案选择，避免同一设备出现多个名称。"); note.setTextColor(ink); root.addView(note);
