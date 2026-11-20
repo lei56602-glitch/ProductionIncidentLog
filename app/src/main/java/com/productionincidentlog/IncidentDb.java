@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class IncidentDb extends SQLiteOpenHelper {
-    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 3); }
+    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 4); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE equipment(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,active INTEGER NOT NULL DEFAULT 1)");
@@ -20,6 +20,9 @@ public class IncidentDb extends SQLiteOpenHelper {
         seed(db, "滚筒"); seed(db, "除湿机");
         db.execSQL("CREATE TABLE incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
         db.execSQL("CREATE TABLE incident_status_history(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,old_status TEXT NOT NULL,new_status TEXT NOT NULL,changed_at TEXT NOT NULL)");
+        createCatalogTable(db);
+        seedCatalog(db,"team","A班"); seedCatalog(db,"team","B班");
+        seedCatalog(db,"area","造粒"); seedCatalog(db,"area","仓库");
     }
 
     private void seed(SQLiteDatabase db, String name) {
@@ -29,6 +32,35 @@ public class IncidentDb extends SQLiteOpenHelper {
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
         if (oldVersion < 3) db.execSQL("CREATE TABLE IF NOT EXISTS incident_status_history(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,old_status TEXT NOT NULL,new_status TEXT NOT NULL,changed_at TEXT NOT NULL)");
+        if (oldVersion < 4) {
+            createCatalogTable(db);
+            seedCatalog(db,"team","A班"); seedCatalog(db,"team","B班");
+            seedCatalog(db,"area","造粒"); seedCatalog(db,"area","仓库");
+        }
+    }
+
+    private void createCatalogTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS master_catalog(id INTEGER PRIMARY KEY AUTOINCREMENT,category TEXT NOT NULL,name TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,UNIQUE(category,name))");
+    }
+    private void seedCatalog(SQLiteDatabase db,String category,String name) {
+        ContentValues v=new ContentValues();v.put("category",category);v.put("name",name);v.put("active",1);
+        db.insertWithOnConflict("master_catalog",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+    }
+    public List<String> catalogNames(String category) {
+        List<String> names=new ArrayList<>();
+        try(Cursor c=getReadableDatabase().rawQuery("SELECT name FROM master_catalog WHERE category=? AND active=1 ORDER BY id",new String[]{category})) {
+            while(c.moveToNext()) names.add(c.getString(0));
+        }
+        return names;
+    }
+    public boolean addCatalogValue(String category,String name) {
+        if(category==null||name==null||name.trim().isEmpty()) return false;
+        ContentValues v=new ContentValues();v.put("category",category);v.put("name",name.trim());v.put("active",1);
+        return getWritableDatabase().insertWithOnConflict("master_catalog",null,v,SQLiteDatabase.CONFLICT_IGNORE)!=-1;
+    }
+    public boolean deactivateCatalogValue(String category,String name) {
+        ContentValues v=new ContentValues();v.put("active",0);
+        return getWritableDatabase().update("master_catalog",v,"category=? AND name=? AND active=1",new String[]{category,name})>0;
     }
 
     public List<String> equipmentNames() {
