@@ -1085,6 +1085,7 @@ public class MainActivity extends Activity {
         Spinner team=spinner(body,"班组",catalogFilter("team","全部班组"));
         Spinner area=spinner(body,"区域",catalogFilter("area","全部区域"));
         Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        Spinner status=spinner(body,"整改状态",java.util.Arrays.asList("全部状态","待整改","整改中","已完成","已逾期"));
         List<String> equipmentOptions=new java.util.ArrayList<>(); equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
         Spinner equipment=spinner(body,"设备",equipmentOptions);
         LinearLayout result=new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL); result.setPadding(5,8,5,8);
@@ -1097,7 +1098,15 @@ public class MainActivity extends Activity {
             if(!f.isEmpty()&&!t.isEmpty()&&f.compareTo(t)>0) {
                 Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
             }
-            List<String[]> rows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
+            List<String[]> fetchedRows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
+            String statusChoice=status.getSelectedItem().toString();
+            String todayStatus=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+            List<String[]> rows=new java.util.ArrayList<>();
+            for(String[] incident:fetchedRows) {
+                boolean overdue=!"已完成".equals(incident[14]) && incident[13]!=null && !incident[13].trim().isEmpty() && incident[13].compareTo(todayStatus)<0;
+                if("已逾期".equals(statusChoice)) { if(overdue) rows.add(incident); }
+                else if("全部状态".equals(statusChoice) || statusChoice.equals(incident[14])) rows.add(incident);
+            }
             TextView totalCard=new TextView(this);
             totalCard.setText("筛选事故总数\n"+rows.size()+" 起   ·   点击查看明细");
             totalCard.setTextColor(0xFF1556A8);
@@ -1144,7 +1153,14 @@ public class MainActivity extends Activity {
                 result.addView(new IncidentBarChart(this,labels,values));
             }
         };
-        body.addView(button("应用筛选并统计",calculate)); body.addView(result); calculate.run();
+        body.addView(button("应用筛选并统计",calculate)); body.addView(result);
+        android.widget.AdapterView.OnItemSelectedListener statsFilterListener=new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){calculate.run();}
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        };
+        team.setOnItemSelectedListener(statsFilterListener); area.setOnItemSelectedListener(statsFilterListener);
+        type.setOnItemSelectedListener(statsFilterListener); equipment.setOnItemSelectedListener(statsFilterListener);
+        status.setOnItemSelectedListener(statsFilterListener); calculate.run();
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("统计");
     }
 
