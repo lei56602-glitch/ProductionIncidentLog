@@ -90,6 +90,7 @@ public class MainActivity extends Activity {
         root.addView(button("备份全部数据（含照片 / 视频）",this::startBackup));
         root.addView(button("从备份恢复数据",this::chooseRestore));
         root.addView(button("立即检查整改提醒",this::checkRemindersNow));
+        root.addView(button("检查照片 / 视频附件完整性",this::checkAttachmentIntegrity));
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
@@ -199,8 +200,9 @@ public class MainActivity extends Activity {
                     .setMessage("删除后将同时删除该事故关联的照片和视频附件，且无法恢复。\n\n事故编号："+r[0])
                     .setNegativeButton("取消",null)
                     .setPositiveButton("确认删除",(dialog,which) -> {
+                        removeIncidentAttachmentFiles(r[0]);
                         db.deleteIncident(r[0]);
-                        Toast.makeText(this,"事故档案已删除",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this,"事故档案及本机附件文件已删除",Toast.LENGTH_SHORT).show();
                         records();
                     }).show()));
             }
@@ -445,6 +447,51 @@ public class MainActivity extends Activity {
         }
         return androidx.core.content.FileProvider.getUriForFile(this,getPackageName()+".fileprovider",target).toString();
     }
+    private java.io.File ownedAttachmentFile(String rawUri) {
+        try {
+            android.net.Uri uri=android.net.Uri.parse(rawUri);
+            if(!(getPackageName()+".fileprovider").equals(uri.getAuthority())) return null;
+            List<String> parts=uri.getPathSegments();
+            if(parts.size()<3 || !"incident_attachments".equals(parts.get(0))) return null;
+            java.io.File root=attachmentDirectory();
+            java.io.File file=new java.io.File(root,parts.get(1));
+            for(int i=2;i<parts.size();i++) file=new java.io.File(file,parts.get(i));
+            String base=root.getCanonicalPath()+java.io.File.separator;
+            return file.getCanonicalPath().startsWith(base)?file:null;
+        } catch(Exception e) { return null; }
+    }
+    private void removeIncidentAttachmentFiles(String code) {
+        for(String[] item:db.attachments(code)) {
+            java.io.File file=ownedAttachmentFile(item[0]);
+            if(file!=null && file.isFile()) file.delete();
+        }
+        java.io.File dir=new java.io.File(attachmentDirectory(),code.replaceAll("[^A-Za-z0-9_-]","_"));
+        java.io.File[] remaining=dir.listFiles();
+        if(remaining!=null && remaining.length==0) dir.delete();
+    }
+    private void checkAttachmentIntegrity() {
+        List<String[]> items=db.allAttachments();
+        List<String> missing=new java.util.ArrayList<>();
+        for(String[] item:items) {
+            try(android.database.Cursor ignored=null) {
+                android.net.Uri uri=android.net.Uri.parse(item[1]);
+                try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
+                    if(in==null) missing.add(item[0]);
+                }
+            } catch(Exception e) { missing.add(item[0]); }
+        }
+        if(missing.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("附件完整性检查")
+                .setMessage("检查完成：共 "+items.size()+" 个附件，均可读取。")
+                .setPositiveButton("关闭",null).show();
+        } else {
+            StringBuilder message=new StringBuilder("发现 "+missing.size()+" 个无法读取的附件（共 "+items.size()+" 个）：");
+            for(String code:missing) message.append("\\n").append(code);
+            new AlertDialog.Builder(this).setTitle("附件完整性异常")
+                .setMessage(message.toString()).setPositiveButton("关闭",null).show();
+        }
+    }
+
     private void startBackup() {
         android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
