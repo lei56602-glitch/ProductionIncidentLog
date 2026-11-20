@@ -52,7 +52,13 @@ public class IncidentDb extends SQLiteOpenHelper {
         v.put("description", description); v.put("analysis", analysis); v.put("cause", cause);
         v.put("immediate_action", action); v.put("prevention", prevention); v.put("owner", owner); v.put("due_date", dueDate);
         v.put("created_at", String.valueOf(System.currentTimeMillis()));
-        getWritableDatabase().insertOrThrow("incidents", null, v);
+        SQLiteDatabase database = getWritableDatabase();
+        database.insertOrThrow("incidents", null, v);
+        ContentValues initialEvent = new ContentValues();
+        initialEvent.put("incident_code",code); initialEvent.put("old_status","新建");
+        initialEvent.put("new_status","待整改");
+        initialEvent.put("changed_at",new SimpleDateFormat("yyyy-MM-dd HH:mm:ss",Locale.getDefault()).format(new Date()));
+        database.insert("incident_status_history",null,initialEvent);
         return code;
     }
     public int countAll() { return scalar("SELECT COUNT(*) FROM incidents", null); }
