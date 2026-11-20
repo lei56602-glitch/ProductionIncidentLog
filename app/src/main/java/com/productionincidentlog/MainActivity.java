@@ -877,7 +877,9 @@ public class MainActivity extends Activity {
         Spinner equipment = spinner(reportBody,"设备名称",equipmentOptions);
         TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); reportBody.addView(count);
         final List<String[]>[] selected = new List[]{new java.util.ArrayList<String[]>()};
+        final boolean[] loadValid={false};
         Runnable load = () -> {
+            loadValid[0]=false;
             String f=from.getText().toString().trim(), t=to.getText().toString().trim();
             if ((!f.isEmpty() && !f.matches("\\d{4}-\\d{2}-\\d{2}")) ||
                 (!t.isEmpty() && !t.matches("\\d{4}-\\d{2}-\\d{2}"))) {
@@ -889,25 +891,62 @@ public class MainActivity extends Activity {
             selected[0]=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             count.setText("当前符合条件："+selected[0].size()+" 起事故");
+            loadValid[0]=true;
         };
-        TextView pdfOption=card("▣  月度 / 年度事故报告","PDF · 适合查看、归档和打印");
-        reportBody.addView(pdfOption);
-        TextView excelOption=card("▦  事故统计报表","Excel · 汇总、详细记录、统计分析三个工作表");
-        reportBody.addView(excelOption);
+        reportBody.addView(sectionTitle("选择报表类型"));
+        final int[] reportChoice={0};
+        String[] reportTitles={"月度事故报告","年度事故报告","事故统计报表"};
+        String[] reportSubtitles={"PDF · 本月事故汇总及详细记录","PDF · 本年度事故汇总及详细记录","Excel · 汇总、详细记录、统计分析三个工作表"};
+        TextView[] reportCards=new TextView[3];
+        LinearLayout reportOptions=new LinearLayout(this);
+        reportOptions.setOrientation(LinearLayout.VERTICAL);
+        int[] reportIcons={0xFFE84C4C,0xFFE84C4C,0xFF16A36A};
+        for(int option=0;option<3;option++){
+            final int index=option;
+            TextView choice=new TextView(this);
+            reportCards[option]=choice;
+            choice.setText((option==0?"▣":option==1?"▣":"▦")+"   "+reportTitles[option]+"\\n       "+reportSubtitles[option]+"\\n");
+            choice.setTextColor(ink);
+            choice.setTextSize(14);
+            choice.setTypeface(null,Typeface.BOLD);
+            choice.setPadding(15,13,12,13);
+            LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(-1,-2);
+            op.setMargins(2,4,2,4);
+            reportOptions.addView(choice,op);
+            choice.setOnClickListener(v->{
+                reportChoice[0]=index;
+                for(int k=0;k<3;k++){
+                    reportCards[k].setBackground(rounded(k==index?0xFFE7F0FF:0xFFFFFFFF,16));
+                    reportCards[k].setCompoundDrawables(null,null,null,null);
+                    reportCards[k].setTextColor(k==index?blue:ink);
+                }
+                if(index==0){
+                    Calendar cal=Calendar.getInstance();cal.set(Calendar.DAY_OF_MONTH,1);
+                    from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));
+                    to.setText(today);
+                } else if(index==1){
+                    Calendar cal=Calendar.getInstance();cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);
+                    from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));
+                    to.setText(today);
+                }
+                load.run();
+            });
+        }
+        reportBody.addView(reportOptions);
+        reportCards[0].performClick();
         reportBody.addView(button("查询报表范围",load));
-        reportBody.addView(button("导出 Excel（三个工作表）",() -> {
+        reportBody.addView(button("生成所选报表",() -> {
             load.run();
+            if(!loadValid[0]) return;
             try {
-                java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
-                shareExport(file,"application/vnd.ms-excel");
-            } catch(Exception e) { Toast.makeText(this,"Excel 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
-        }));
-        reportBody.addView(button("生成 PDF 事故报告",() -> {
-            load.run();
-            try {
-                java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
-                shareExport(file,"application/pdf");
-            } catch(Exception e) { Toast.makeText(this,"PDF 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
+                if(reportChoice[0]==2){
+                    java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
+                    shareExport(file,"application/vnd.ms-excel");
+                } else {
+                    java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
+                    shareExport(file,"application/pdf");
+                }
+            } catch(Exception e) { Toast.makeText(this,"报表生成失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
         }));
         reportBody.addView(sectionTitle("导出说明"));
         reportBody.addView(card("支持条件导出","可按班组、区域、事故类型、设备及自定义日期范围筛选"));
