@@ -55,8 +55,12 @@ public class IncidentDb extends SQLiteOpenHelper {
     }
     public boolean addCatalogValue(String category,String name) {
         if(category==null||name==null||name.trim().isEmpty()) return false;
+        SQLiteDatabase database=getWritableDatabase();
+        ContentValues restore=new ContentValues();restore.put("active",1);
+        int restored=database.update("master_catalog",restore,"category=? AND name=?",new String[]{category,name.trim()});
+        if(restored>0) return true;
         ContentValues v=new ContentValues();v.put("category",category);v.put("name",name.trim());v.put("active",1);
-        return getWritableDatabase().insertWithOnConflict("master_catalog",null,v,SQLiteDatabase.CONFLICT_IGNORE)!=-1;
+        return database.insertWithOnConflict("master_catalog",null,v,SQLiteDatabase.CONFLICT_IGNORE)!=-1;
     }
     public boolean deactivateCatalogValue(String category,String name) {
         ContentValues v=new ContentValues();v.put("active",0);
