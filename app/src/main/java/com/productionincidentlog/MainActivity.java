@@ -294,11 +294,17 @@ public class MainActivity extends Activity {
     }
     private void addStatisticGroup(LinearLayout target,String heading,List<String[]> rows,int column,String[] categories) {
         target.addView(sectionTitle(heading+"（点击查看明细）"));
-        for(String category:categories) {
-            int count=0; for(String[] r:rows) if(category.equals(r[column])) count++;
+        int[] values=new int[categories.length];
+        for(int i=0;i<categories.length;i++) {
+            for(String[] r:rows) if(categories[i].equals(r[column])) values[i]++;
+        }
+        if(column==2) target.addView(new IncidentBarChart(this,categories,values));
+        for(int i=0;i<categories.length;i++) {
+            final String category=categories[i]; final int count=values[i];
             target.addView(button(category+"："+count+" 起",() -> showFilteredRecords(heading+"："+category,filterRows(rows,column,category))));
         }
     }
+
     private List<String[]> filterRows(List<String[]> source,int column,String value) {
         List<String[]> out=new java.util.ArrayList<>();
         for(String[] r:source) if(value.equals(r[column])) out.add(r);
