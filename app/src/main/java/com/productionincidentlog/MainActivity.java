@@ -833,24 +833,73 @@ public class MainActivity extends Activity {
     private void showCatalog(String title,String[] values) {
         new AlertDialog.Builder(this).setTitle(title).setItems(values,(dialog,which)->{}).setPositiveButton("关闭",null).show();
     }
+    private LinearLayout settingsGroup(LinearLayout body,String title,String subtitle) {
+        LinearLayout group=new LinearLayout(this);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.setPadding(10,8,10,8);
+        group.setBackground(rounded(0xFFF0F5FB,18));
+        TextView heading=new TextView(this);
+        heading.setText(title);
+        heading.setTextColor(0xFF174A82);
+        heading.setTextSize(15);
+        heading.setTypeface(null,Typeface.BOLD);
+        heading.setPadding(5,3,5,2);
+        group.addView(heading);
+        if(subtitle!=null&&!subtitle.isEmpty()){
+            TextView note=new TextView(this);
+            note.setText(subtitle);
+            note.setTextColor(0xFF718096);
+            note.setTextSize(12);
+            note.setPadding(5,0,5,5);
+            group.addView(note);
+        }
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(2,5,2,8);
+        body.addView(group,lp);
+        return group;
+    }
     private void settingsCenter() {
-        page("设置中心"); ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(3,10,3,12); scroll.addView(body);
-        body.addView(sectionTitle("基础资料管理"));
-        body.addView(settingItem("设备管理",this::equipment));
-        body.addView(settingItem("班组管理",()->showCatalog("班组管理",new String[]{"A班","B班"})));
-        body.addView(settingItem("区域管理",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
-        body.addView(sectionTitle("数据安全"));
-        body.addView(settingItem("数据备份",this::startBackup));
-        body.addView(settingItem("从备份恢复数据",this::chooseRestore));
-        body.addView(settingItem("照片 / 视频附件完整性",this::checkAttachmentIntegrity));
-        body.addView(sectionTitle("消息通知"));
+        page("设置中心");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout body=new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(5,10,5,14);
+        scroll.addView(body);
+        LinearLayout intro=new LinearLayout(this);
+        intro.setOrientation(LinearLayout.VERTICAL);
+        intro.setPadding(17,15,17,15);
+        intro.setBackground(rounded(0xFFE5F0FF,18));
+        TextView introTitle=new TextView(this);
+        introTitle.setText("系统设置与数据维护");
+        introTitle.setTextColor(0xFF1556A8);
+        introTitle.setTextSize(17);
+        introTitle.setTypeface(null,Typeface.BOLD);
+        TextView introNote=new TextView(this);
+        introNote.setText("统一管理现场基础资料、事故数据安全和整改通知");
+        introNote.setTextColor(0xFF58718E);
+        introNote.setTextSize(13);
+        introNote.setPadding(0,5,0,0);
+        intro.addView(introTitle);
+        intro.addView(introNote);
+        body.addView(intro);
+        LinearLayout catalogs=settingsGroup(body,"基础资料管理","维护现场统一选项，减少重复名称");
+        catalogs.addView(settingItem("设备管理",this::equipment));
+        catalogs.addView(settingItem("班组管理",()->showCatalog("班组管理",new String[]{"A班","B班"})));
+        catalogs.addView(settingItem("区域管理",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
+        LinearLayout safety=settingsGroup(body,"数据安全","备份文件包含事故数据库及照片、视频附件");
+        safety.addView(settingItem("数据备份",this::startBackup));
+        safety.addView(settingItem("从备份恢复数据",this::chooseRestore));
+        safety.addView(settingItem("照片 / 视频附件完整性",this::checkAttachmentIntegrity));
+        LinearLayout notifications=settingsGroup(body,"消息通知","按计划检查整改逾期及未来 7 天到期任务");
         LinearLayout reminderRow=new LinearLayout(this);
         reminderRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        reminderRow.setPadding(15,10,12,10);
-        reminderRow.setBackground(rounded(0xFFFFFFFF,16));
+        reminderRow.setPadding(15,11,12,11);
+        reminderRow.setBackground(rounded(0xFFFFFFFF,15));
         TextView reminderText=new TextView(this);
         reminderText.setText("整改期限通知\n每天检查逾期及未来 7 天到期任务");
-        reminderText.setTextColor(ink);reminderText.setTextSize(14);reminderText.setTypeface(null,Typeface.BOLD);
+        reminderText.setTextColor(ink);
+        reminderText.setTextSize(14);
+        reminderText.setTypeface(null,Typeface.BOLD);
         reminderRow.addView(reminderText,new LinearLayout.LayoutParams(0,-2,1));
         Switch reminderSwitch=new Switch(this);
         reminderSwitch.setChecked(IncidentReminderScheduler.isEnabled(this));
@@ -865,14 +914,14 @@ public class MainActivity extends Activity {
             }
             Toast.makeText(this,enabled?"整改通知已开启":"整改通知已关闭",Toast.LENGTH_SHORT).show();
         });
-        LinearLayout.LayoutParams reminderLp=new LinearLayout.LayoutParams(-1,-2);
-        reminderLp.setMargins(2,4,2,6);body.addView(reminderRow,reminderLp);
-        body.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
-        body.addView(sectionTitle("系统设置"));
-        body.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
+        notifications.addView(reminderRow);
+        notifications.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
+        LinearLayout system=settingsGroup(body,"系统信息","查看当前安装版本与功能范围");
+        system.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
             .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("我的");
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("我的");
     }
     private void equipment() {
         page("设备档案管理");
