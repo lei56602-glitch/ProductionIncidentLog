@@ -113,7 +113,7 @@ public class MainActivity extends Activity {
         s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values)); box.addView(s); return s;
     }
     private static class IncidentDraft {
-        String date,team,area,type,equipment,people;
+        String date,team,area,type,equipment,people,description,analysis,cause,action,prevention,owner,dueDate;
         List<android.net.Uri> attachments=new java.util.ArrayList<>();
     }
     private void incidentForm() { incidentForm(null); }
@@ -172,13 +172,13 @@ public class MainActivity extends Activity {
         TextView step=new TextView(this); step.setText("✓ 1 基本信息     ━━━━━     ● 2 详细内容     ○ 3 完成");
         step.setTextColor(blue); step.setTextSize(14); step.setTypeface(null,Typeface.BOLD); step.setPadding(4,12,4,18); form.addView(step);
         TextView heading=sectionTitle("事故分析"); form.addView(heading);
-        EditText description=field(form,"事故经过 *","请描述事故发生过程（不少于 50 字）","",4);
-        EditText analysis=field(form,"事故分析 *","分析事故过程、存在的问题及影响","",4);
-        EditText cause=field(form,"事故原因 *","包括直接原因、间接原因等","",4);
-        EditText action=field(form,"当下采取措施 *","事故发生后采取了哪些措施","",3);
-        EditText prevention=field(form,"未来如何避免 *","预防措施和改进方案","",3);
-        EditText owner=field(form,"整改负责人","负责推动整改的人","",1);
-        EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
+        EditText description=field(form,"事故经过 *","请描述事故发生过程（不少于 50 字）",draft.description==null?"":draft.description,4);
+        EditText analysis=field(form,"事故分析 *","分析事故过程、存在的问题及影响",draft.analysis==null?"":draft.analysis,4);
+        EditText cause=field(form,"事故原因 *","包括直接原因、间接原因等",draft.cause==null?"":draft.cause,4);
+        EditText action=field(form,"当下采取措施 *","事故发生后采取了哪些措施",draft.action==null?"":draft.action,3);
+        EditText prevention=field(form,"未来如何避免 *","预防措施和改进方案",draft.prevention==null?"":draft.prevention,3);
+        EditText owner=field(form,"整改负责人","负责推动整改的人",draft.owner==null?"":draft.owner,1);
+        EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",draft.dueDate==null?"":draft.dueDate,1);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("下一步：确认提交",()->{
             if(description.getText().toString().trim().isEmpty()||analysis.getText().toString().trim().isEmpty()
@@ -200,7 +200,12 @@ public class MainActivity extends Activity {
                     Toast.makeText(this,"事故档案保存成功："+code+"，附件 "+saved+" 个",Toast.LENGTH_LONG).show(); dashboard();
                 }).show();
         }));
-        root.addView(button("返回：修改基本信息",()->incidentFormWithDraft(draft)));
+        root.addView(button("返回：修改基本信息",()->{
+            draft.description=description.getText().toString(); draft.analysis=analysis.getText().toString();
+            draft.cause=cause.getText().toString(); draft.action=action.getText().toString();
+            draft.prevention=prevention.getText().toString(); draft.owner=owner.getText().toString(); draft.dueDate=dueDate.getText().toString();
+            incidentFormWithDraft(draft);
+        }));
     }
     private void incidentFormWithDraft(IncidentDraft draft) {
         pendingAttachments=new java.util.ArrayList<>(draft.attachments);
