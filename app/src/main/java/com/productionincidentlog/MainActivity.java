@@ -269,45 +269,26 @@ public class MainActivity extends Activity {
         timeLp.topMargin=dp(8);
         body.addView(dateInfo,timeLp);
         body.addView(sectionTitle("快速登记事故"));
-        String[] types={"设备损伤","物料混料","人员受伤"};
-        String[] icons={"🔧","📦","✚"};
-        int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
-        int screenWidthDp=getResources().getConfiguration().screenWidthDp;
+        List<String> quickTypes=db.catalogNames("type");
+        if(quickTypes.isEmpty()) quickTypes=java.util.Arrays.asList("设备损伤","物料混料","人员受伤");
         LinearLayout quick=new LinearLayout(this);
         quick.setOrientation(LinearLayout.VERTICAL);
-        int columns=screenWidthDp<380?2:3;
-        for(int rowIndex=0;rowIndex<(types.length+columns-1)/columns;rowIndex++) {
-            LinearLayout quickRow=new LinearLayout(this);
-            quickRow.setOrientation(LinearLayout.HORIZONTAL);
-            for(int col=0;col<columns;col++) {
-                int i=rowIndex*columns+col;
-                if(i>=types.length) break;
-                final String chosen=types[i];
-                TextView tile=new TextView(this);
-                tile.setText(icons[i]+"\n"+types[i]+"\n登记");
-                tile.setGravity(android.view.Gravity.CENTER);
-                tile.setTextColor(ink);
-                tile.setTextSize(14);
-                tile.setTypeface(null,Typeface.BOLD);
-                tile.setPadding(dp(10),dp(14),dp(10),dp(14));
-                tile.setMinHeight(dp(100));
-                tile.setElevation(dp(1));
-                tile.setContentDescription("快速登记"+chosen+"事故");
-                tile.setBackground(rounded(colors[i],dp(16)));
-                tile.setFocusable(true);
-                tile.setClickable(true);
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
-                p.setMargins(dp(4),dp(4),dp(4),dp(4));
-                quickRow.addView(tile,p);
-                tile.setOnClickListener(v->incidentForm(chosen));
-            }
-            if(columns==2 && rowIndex==1 && quickRow.getChildCount()==1) {
-                ViewGroup.LayoutParams only=quickRow.getChildAt(0).getLayoutParams();
-                ((LinearLayout.LayoutParams)only).weight=1;
-            }
-            quick.addView(quickRow);
+        quick.setPadding(dp(12),dp(8),dp(12),dp(8));
+        quick.setBackground(rounded(0xFFFFFFFF,dp(16)));
+        final String[] quickSelected={quickTypes.get(0)};
+        java.util.List<CheckBox> quickChecks=new java.util.ArrayList<>();
+        for(String typeName:quickTypes) {
+            CheckBox check=new CheckBox(this);
+            check.setText(typeName); check.setTextSize(15); check.setTextColor(ink);
+            check.setMinHeight(dp(48)); check.setPadding(dp(8),dp(4),dp(8),dp(4));
+            check.setChecked(typeName.equals(quickSelected[0]));
+            check.setOnCheckedChangeListener((buttonView,checked)->{
+                if(checked){quickSelected[0]=typeName;for(CheckBox other:quickChecks)if(other!=check)other.setChecked(false);}
+            });
+            quickChecks.add(check); quick.addView(check);
         }
         body.addView(quick);
+        body.addView(button("开始登记所选事故",()->incidentForm(quickSelected[0])));
         body.addView(button("▥  数据统计 · 查询分析     ›",this::statistics));
         body.addView(sectionTitle("本月概况"));
         String month=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
