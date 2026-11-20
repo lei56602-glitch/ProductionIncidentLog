@@ -419,12 +419,19 @@ public class MainActivity extends Activity {
         search.setPadding(14,8,14,8);
         search.setBackground(rounded(0xFFFFFFFF,18));
         root.addView(search);
+        android.widget.HorizontalScrollView filterScroll=new android.widget.HorizontalScrollView(this);
+        filterScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout filters=new LinearLayout(this);
         filters.setOrientation(LinearLayout.HORIZONTAL);
         Spinner timeFilter=spinner(filters,"",java.util.Arrays.asList("全部时间","本月","本季度","本年度"));
         Spinner typeFilter=spinner(filters,"",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         Spinner areaFilter=spinner(filters,"",java.util.Arrays.asList("全部区域","造粒","仓库"));
-        root.addView(filters);
+        Spinner teamFilter=spinner(filters,"",java.util.Arrays.asList("全部班组","A班","B班"));
+        List<String> deviceChoices=new java.util.ArrayList<>();
+        deviceChoices.add("全部设备"); deviceChoices.addAll(db.equipmentNames());
+        Spinner deviceFilter=spinner(filters,"",deviceChoices);
+        filterScroll.addView(filters);
+        root.addView(filterScroll);
         TextView countLabel=new TextView(this);
         countLabel.setTextColor(ink);
         countLabel.setTextSize(13);
@@ -440,6 +447,8 @@ public class MainActivity extends Activity {
             String period=timeFilter.getSelectedItem().toString();
             String typeChoice=typeFilter.getSelectedItem().toString();
             String areaChoice=areaFilter.getSelectedItem().toString();
+            String teamChoice=teamFilter.getSelectedItem().toString();
+            String deviceChoice=deviceFilter.getSelectedItem().toString();
             String currentMonth=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
             Calendar calendar=Calendar.getInstance();
             int currentYear=calendar.get(Calendar.YEAR);
@@ -455,6 +464,8 @@ public class MainActivity extends Activity {
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
                 if(!"全部区域".equals(areaChoice) && !areaChoice.equals(r[3])) continue;
+                if(!"全部班组".equals(teamChoice) && !teamChoice.equals(r[2])) continue;
+                if(!"全部设备".equals(deviceChoice) && !deviceChoice.equals(r[5])) continue;
                 LinearLayout item=new LinearLayout(this);
                 item.setOrientation(LinearLayout.VERTICAL);
                 item.setPadding(14,12,14,12);
@@ -514,6 +525,8 @@ public class MainActivity extends Activity {
         timeFilter.setOnItemSelectedListener(filterListener);
         typeFilter.setOnItemSelectedListener(filterListener);
         areaFilter.setOnItemSelectedListener(filterListener);
+        teamFilter.setOnItemSelectedListener(filterListener);
+        deviceFilter.setOnItemSelectedListener(filterListener);
         refresh.run();
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("记录");
