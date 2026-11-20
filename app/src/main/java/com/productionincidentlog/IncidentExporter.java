@@ -65,7 +65,7 @@ public class IncidentExporter {
         for(int i=0;i<rows.size()+1;i++) {
             if(page==null || y>780) {
                 if(page!=null) pdf.finishPage(page);
-                PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,pageNo++,1).create();
+                PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,pageNo++).create();
                 page=pdf.startPage(info); canvas=page.getCanvas(); y=42;
                 paint.setTextSize(17); paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
                 canvas.drawText("生产事故报告",40,y,paint); y+=25;
