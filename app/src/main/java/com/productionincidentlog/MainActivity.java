@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_BACKUP = 4103;
     private static final int REQUEST_RESTORE = 4104;
     private TextView attachmentHint;
+    private LinearLayout attachmentPreview;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); db = new IncidentDb(this); dashboard();
@@ -264,6 +265,10 @@ public class MainActivity extends Activity {
         if(draft.equipment!=null && equipmentNames.contains(draft.equipment)) equipment.setSelection(equipmentNames.indexOf(draft.equipment));
         EditText people=field(form,"涉事人员","人员姓名或工号",draft.people==null?"":draft.people,1);
         attachmentHint=new TextView(this); attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        attachmentPreview=new LinearLayout(this); attachmentPreview.setOrientation(LinearLayout.HORIZONTAL);
+        android.widget.HorizontalScrollView previewScroll=new android.widget.HorizontalScrollView(this);
+        previewScroll.setHorizontalScrollBarEnabled(false); previewScroll.addView(attachmentPreview); form.addView(previewScroll);
+        refreshAttachmentPreview();
         form.addView(button("＋ 添加现场照片 / 视频",()->{
             android.content.Intent pick=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
             pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
@@ -1140,7 +1145,36 @@ public class MainActivity extends Activity {
         if(data.getClipData()!=null) { android.content.ClipData clip=data.getClipData(); for(int i=0;i<clip.getItemCount();i++) addPendingAttachment(clip.getItemAt(i).getUri()); }
         else if(data.getData()!=null) addPendingAttachment(data.getData());
         if (attachmentHint != null) attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个附件");
+        refreshAttachmentPreview();
         Toast.makeText(this,"已选择 "+pendingAttachments.size()+" 个附件",Toast.LENGTH_SHORT).show();
+    }
+    private void refreshAttachmentPreview() {
+        if(attachmentPreview==null) return;
+        attachmentPreview.removeAllViews();
+        int size=(int)(88*getResources().getDisplayMetrics().density);
+        for(android.net.Uri uri:pendingAttachments) {
+            String mime=getContentResolver().getType(uri);
+            if(mime!=null && mime.startsWith("image/")) {
+                ImageView thumb=new ImageView(this);
+                thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                try { thumb.setImageURI(uri); } catch(Exception ignored) {}
+                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
+                p.setMargins(3,4,7,5); attachmentPreview.addView(thumb,p);
+                thumb.setOnClickListener(v->{
+                    try { android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
+                        view.setDataAndType(uri,mime); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view);
+                    } catch(Exception e) { Toast.makeText(this,"无法预览附件",Toast.LENGTH_SHORT).show(); }
+                });
+            } else {
+                TextView video=new TextView(this);
+                video.setText("▶\n视频");
+                video.setGravity(android.view.Gravity.CENTER);
+                video.setTextColor(blue);
+                video.setBackground(rounded(0xFFE5F0FF,14));
+                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
+                p.setMargins(3,4,7,5); attachmentPreview.addView(video,p);
+            }
+        }
     }
     private void addPendingAttachment(android.net.Uri uri) { if(uri!=null && !pendingAttachments.contains(uri)) pendingAttachments.add(uri); }
     private void shareExport(java.io.File file, String mime) {
