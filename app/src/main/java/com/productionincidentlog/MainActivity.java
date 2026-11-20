@@ -438,8 +438,26 @@ public class MainActivity extends Activity {
     private void showIncidentDetail(String[] r) {
         page("事故详情");
         ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
-        TextView code=sectionTitle(r[0]); body.addView(code);
-        body.addView(card("整改状态",r[14]));
+        LinearLayout identity=new LinearLayout(this);
+        identity.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        identity.setPadding(12,10,12,10);
+        identity.setBackground(rounded(0xFFFFFFFF,18));
+        TextView code=new TextView(this);
+        code.setText(r[0]);
+        code.setTextColor(ink);
+        code.setTextSize(17);
+        code.setTypeface(null,Typeface.BOLD);
+        identity.addView(code,new LinearLayout.LayoutParams(0,-2,1));
+        TextView statusBadge=new TextView(this);
+        statusBadge.setText(r[14]);
+        statusBadge.setTextColor("已完成".equals(r[14])?0xFF16865B:
+            ("整改中".equals(r[14])?0xFFB7791F:0xFF1769AA));
+        statusBadge.setTypeface(null,Typeface.BOLD);
+        statusBadge.setPadding(11,6,11,6);
+        statusBadge.setBackground(rounded("已完成".equals(r[14])?0xFFDDF5E9:
+            ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
+        identity.addView(statusBadge);
+        body.addView(identity);
         body.addView(card("发生时间 / 班组 / 区域",r[1]+"\n"+r[2]+" · "+r[3]));
         body.addView(card("事故类型 / 设备",r[4]+"\n"+r[5]));
         body.addView(card("涉事人员",r[6]));
