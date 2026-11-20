@@ -144,8 +144,16 @@ public class MainActivity extends Activity {
     }
     private class IndustrialHero extends TextView {
         private final android.graphics.Paint paint=new android.graphics.Paint(3);
-        IndustrialHero(android.content.Context context){super(context);setText("生产事故管理系统\n现场异常记录 · 分析 · 整改闭环");setTextColor(0xFFFFFFFF);setTextSize(20);
-            setGravity(android.view.Gravity.CENTER_VERTICAL|android.view.Gravity.LEFT);setTypeface(null,Typeface.BOLD);setPadding(22,28,20,28);setMinHeight(194);}
+        IndustrialHero(android.content.Context context){super(context);
+            android.text.SpannableString title=new android.text.SpannableString("生产事故管理系统\n现场异常记录 · 分析 · 整改闭环");
+            title.setSpan(new android.text.style.AbsoluteSizeSpan(23,true),0,9,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            title.setSpan(new android.text.style.StyleSpan(Typeface.BOLD),0,9,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            title.setSpan(new android.text.style.AbsoluteSizeSpan(12,true),10,title.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            title.setSpan(new android.text.style.ForegroundColorSpan(0xFFDCEEFF),10,title.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            setText(title);setTextColor(0xFFFFFFFF);setTextSize(20);
+            setGravity(android.view.Gravity.CENTER_VERTICAL|android.view.Gravity.LEFT);setTypeface(null,Typeface.BOLD);
+            setShadowLayer(2.5f,0,1.5f,0x6600183D);setPadding(22,28,20,28);setMinHeight(204);
+            setContentDescription("生产事故管理系统，现场异常记录、分析与整改闭环");}
         @Override protected void onDraw(android.graphics.Canvas canvas){
             float w=getWidth(),h=getHeight();
             paint.setStyle(android.graphics.Paint.Style.FILL);
