@@ -30,6 +30,16 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},7304);
         }
     }
+    private void checkRemindersNow() {
+        if(android.os.Build.VERSION.SDK_INT>=33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},7304);
+            Toast.makeText(this,"请允许通知权限后再检查提醒",Toast.LENGTH_LONG).show();
+            return;
+        }
+        sendBroadcast(new android.content.Intent(this,IncidentReminderReceiver.class));
+        Toast.makeText(this,"已检查整改期限；如有逾期或临期任务，将显示系统通知",Toast.LENGTH_LONG).show();
+    }
+
     private void page(String title) {
         root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(18,18,18,18); root.setBackgroundColor(bg);
@@ -79,6 +89,7 @@ public class MainActivity extends Activity {
         root.addView(button("事故报表中心（Excel / PDF）", this::exportCenter));
         root.addView(button("备份全部数据（含照片 / 视频）",this::startBackup));
         root.addView(button("从备份恢复数据",this::chooseRestore));
+        root.addView(button("立即检查整改提醒",this::checkRemindersNow));
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
