@@ -109,9 +109,10 @@ public class MainActivity extends Activity {
         List<android.net.Uri> attachments=new java.util.ArrayList<>();
     }
     private void incidentForm() { incidentForm(null); }
-    private void incidentForm(String presetType) {
-        pendingAttachments=new java.util.ArrayList<>();
-        IncidentDraft draft=new IncidentDraft();
+    private void incidentForm(String presetType) { incidentForm(presetType,null); }
+    private void incidentForm(String presetType,IncidentDraft restore) {
+        pendingAttachments=restore==null?new java.util.ArrayList<>():new java.util.ArrayList<>(restore.attachments);
+        IncidentDraft draft=restore==null?new IncidentDraft():restore;
         page("新增事故记录 · 基本信息");
         ScrollView scroll=new ScrollView(this);
         LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
@@ -131,13 +132,16 @@ public class MainActivity extends Activity {
         }
         form.addView(typeRow);
         String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
-        EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",now,1);
+        EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",draft.date==null?now:draft.date,1);
         Spinner team=spinner(form,"班组 *",java.util.Arrays.asList("A班","B班"));
+        if(draft.team!=null) team.setSelection(Math.max(0,java.util.Arrays.asList("A班","B班").indexOf(draft.team)));
         Spinner area=spinner(form,"区域 *",java.util.Arrays.asList("造粒","仓库"));
+        if(draft.area!=null) area.setSelection(Math.max(0,java.util.Arrays.asList("造粒","仓库").indexOf(draft.area)));
         List<String> equipmentNames=db.equipmentNames(); if(equipmentNames.isEmpty()) equipmentNames.add("未指定");
         Spinner equipment=spinner(form,"设备名称",equipmentNames);
-        EditText people=field(form,"涉事人员","人员姓名或工号","",1);
-        attachmentHint=new TextView(this); attachmentHint.setText("现场照片 / 视频：尚未选择"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        if(draft.equipment!=null && equipmentNames.contains(draft.equipment)) equipment.setSelection(equipmentNames.indexOf(draft.equipment));
+        EditText people=field(form,"涉事人员","人员姓名或工号",draft.people==null?"":draft.people,1);
+        attachmentHint=new TextView(this); attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
         form.addView(button("＋ 添加现场照片 / 视频",()->{
             android.content.Intent pick=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
             pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
@@ -192,7 +196,7 @@ public class MainActivity extends Activity {
     }
     private void incidentFormWithDraft(IncidentDraft draft) {
         pendingAttachments=new java.util.ArrayList<>(draft.attachments);
-        incidentForm(draft.type);
+        incidentForm(draft.type,draft);
     }
     private void records() {
         page("事故档案");
