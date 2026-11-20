@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
             item.setTextSize(12);
             item.setTypeface(null,Typeface.BOLD);
             item.setTextColor(labels[i].equals(selected)?0xFF126FE5:0xFF8392A5);
+            item.setBackground(rounded(labels[i].equals(selected)?0xFFE6F1FF:0x00FFFFFF,14));
             item.setPadding(4,7,4,7);
             nav.addView(item,new LinearLayout.LayoutParams(0,-2,1));
             item.setOnClickListener(v->actions[index].run());
@@ -291,7 +292,7 @@ public class MainActivity extends Activity {
         IncidentDraft draft=restore==null?new IncidentDraft():restore;
         page("新增事故记录 · 基本信息");
         ScrollView scroll=new ScrollView(this);
-        LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
+        LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(10,8,10,10); scroll.addView(form);
         form.addView(stepIndicator(1));
         TextView typeLabel=sectionTitle("事故类型");
         form.addView(typeLabel);
@@ -300,9 +301,12 @@ public class MainActivity extends Activity {
         final int[] selectedType={presetType==null?0:Math.max(0,java.util.Arrays.asList(types).indexOf(presetType))};
         TextView[] typeTiles=new TextView[3];
         for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(types[i]+"\\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
-            typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15); typeTiles[i].setBackground(rounded(colors[i],16));
+            typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15);
+            android.graphics.drawable.GradientDrawable tileBg=rounded(colors[i],16);
+            tileBg.setStroke(i==selectedType[0]?3:1,i==selectedType[0]?blue:0xFFDCE5F0);
+            typeTiles[i].setBackground(tileBg);
             LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); typeRow.addView(typeTiles[i],p);
-            typeTiles[i].setOnClickListener(v->{selectedType[0]=index; for(int j=0;j<3;j++) typeTiles[j].setAlpha(j==index?1f:0.55f);});
+            typeTiles[i].setOnClickListener(v->{selectedType[0]=index; for(int j=0;j<3;j++){typeTiles[j].setAlpha(1f);android.graphics.drawable.GradientDrawable bg=rounded(colors[j],16);bg.setStroke(j==index?3:1,j==index?blue:0xFFDCE5F0);typeTiles[j].setBackground(bg);}});
             typeTiles[i].setAlpha(i==selectedType[0]?1f:0.55f);
         }
         form.addView(typeRow);
