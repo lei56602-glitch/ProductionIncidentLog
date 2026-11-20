@@ -700,6 +700,26 @@ public class MainActivity extends Activity {
         return panel;
     }
 
+    private String remediationDueSummary(String dueDate,String status) {
+        if("已完成".equals(status)) return "整改已完成";
+        if(dueDate==null || dueDate.trim().isEmpty()) return "未设置整改期限";
+        try {
+            SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+            format.setLenient(false);
+            Date due=format.parse(dueDate);
+            Calendar dueDay=Calendar.getInstance(); dueDay.setTime(due);
+            dueDay.set(Calendar.HOUR_OF_DAY,0); dueDay.set(Calendar.MINUTE,0);
+            dueDay.set(Calendar.SECOND,0); dueDay.set(Calendar.MILLISECOND,0);
+            Calendar today=Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY,0); today.set(Calendar.MINUTE,0);
+            today.set(Calendar.SECOND,0); today.set(Calendar.MILLISECOND,0);
+            long days=(dueDay.getTimeInMillis()-today.getTimeInMillis())/86400000L;
+            if(days<0) return "已逾期 "+Math.abs(days)+" 天 · 请尽快完成整改";
+            if(days==0) return "今天到期 · 请完成整改";
+            return "剩余 "+days+" 天";
+        } catch(Exception ignored) { return "整改期限格式无效"; }
+    }
+
     private void showIncidentDetail(String[] r) {
         page("事故详情");
         ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(8,8,8,12); scroll.addView(body);
@@ -789,6 +809,7 @@ public class MainActivity extends Activity {
         body.addView(detailInfoCard("当下采取措施",r[10],0xFFD19A24)); body.addView(detailInfoCard("未来如何避免",r[11],0xFF16865B));
         body.addView(sectionTitle("整改跟踪"));
         body.addView(detailInfoCard("整改负责人",r[12],0xFF1769C2)); body.addView(detailInfoCard("整改期限",r[13],0xFF1769C2));
+        body.addView(detailInfoCard("期限状态",remediationDueSummary(r[13],r[14]),"已完成".equals(r[14])?0xFF16865B:(r[13]!=null && !r[13].trim().isEmpty() && r[13].compareTo(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()))<0?0xFFC43B36:0xFF1769C2)));
         StringBuilder history=new StringBuilder();
         List<String[]> events=db.statusHistory(r[0]);
         if(events.isEmpty()) history.append("暂无状态变更记录");
