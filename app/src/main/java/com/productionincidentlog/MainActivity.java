@@ -116,26 +116,88 @@ public class MainActivity extends Activity {
     }
     private void dashboard() {
         page("生产事故管理系统");
-        ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
-        IndustrialHero hero=new IndustrialHero(this); hero.setElevation(3); body.addView(hero);
-        body.addView(sectionTitle("快速登记"));
-        LinearLayout quick=new LinearLayout(this); quick.setOrientation(LinearLayout.HORIZONTAL); String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
-        for(int i=0;i<types.length;i++){ final String chosen=types[i]; TextView tile=new TextView(this); tile.setText(types[i]+"\\n记录"); tile.setGravity(android.view.Gravity.CENTER);
-            tile.setTextColor(ink); tile.setTextSize(15); tile.setTypeface(null,Typeface.BOLD); tile.setPadding(6,20,6,20); tile.setBackground(rounded(colors[i],18));
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); quick.addView(tile,p); tile.setOnClickListener(v->incidentForm(chosen)); }
-        body.addView(quick); body.addView(button("▥  数据统计 · 查询分析",this::statistics)); body.addView(sectionTitle("本月概况"));
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout body=new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(2,8,2,8);
+        scroll.addView(body);
+        IndustrialHero hero=new IndustrialHero(this);
+        hero.setElevation(4);
+        body.addView(hero);
+        body.addView(sectionTitle("快速登记事故"));
+        LinearLayout quick=new LinearLayout(this);
+        quick.setOrientation(LinearLayout.HORIZONTAL);
+        String[] types={"设备损伤","物料混料","人员受伤"};
+        String[] icons={"🔧","📦","✚"};
+        int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
+        for(int i=0;i<types.length;i++) {
+            final String chosen=types[i];
+            TextView tile=new TextView(this);
+            tile.setText(icons[i]+"\n"+types[i]+"\n记录");
+            tile.setGravity(android.view.Gravity.CENTER);
+            tile.setTextColor(ink);
+            tile.setTextSize(14);
+            tile.setTypeface(null,Typeface.BOLD);
+            tile.setPadding(5,15,5,15);
+            tile.setMinHeight(104);
+            tile.setBackground(rounded(colors[i],18));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
+            p.setMargins(4,3,4,3);
+            quick.addView(tile,p);
+            tile.setOnClickListener(v->incidentForm(chosen));
+        }
+        body.addView(quick);
+        body.addView(button("▥  数据统计 · 查询分析     ›",this::statistics));
+        body.addView(sectionTitle("本月概况"));
         String month=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
-        List<String[]> monthly=db.incidentsFiltered(month+"-01",month+"-31","全部班组","全部区域","全部类型","全部设备");
-        body.addView(card("本月事故总数",monthly.size()+" 起"));
-        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); String[] names={"设备损伤","物料混料","人员受伤"};
-        for(String name:names){ int n=0; for(String[] r:monthly) if(name.equals(r[4])) n++; TextView t=card(name,n+" 起"); LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); row.addView(t,p); }
-        body.addView(row); body.addView(sectionTitle("整改提醒"));
-        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()); List<String[]> overdue=db.incidentsDue(today,0,true); List<String[]> upcoming=db.incidentsDue(today,7,false);
+        List<String[]> monthly=db.incidentsFiltered(month+"-01",month+"-31",
+            "全部班组","全部区域","全部类型","全部设备");
+        TextView total=new TextView(this);
+        total.setText("本月事故总数\n"+monthly.size()+" 起");
+        total.setTextColor(0xFFFFFFFF);
+        total.setTextSize(22);
+        total.setTypeface(null,Typeface.BOLD);
+        total.setPadding(18,17,18,17);
+        total.setBackground(rounded(0xFF1677EB,20));
+        total.setOnClickListener(v->showFilteredRecords("本月事故记录",monthly));
+        body.addView(total);
+        LinearLayout row=new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        String[] names={"设备损伤","物料混料","人员受伤"};
+        String[] typeIcons={"🔧","📦","✚"};
+        for(int i=0;i<names.length;i++) {
+            int n=0;
+            for(String[] r:monthly) if(names[i].equals(r[4])) n++;
+            TextView tile=new TextView(this);
+            tile.setText(typeIcons[i]+"\n"+names[i]+"\n"+n+" 起");
+            tile.setGravity(android.view.Gravity.CENTER);
+            tile.setTextColor(ink);
+            tile.setTextSize(13);
+            tile.setTypeface(null,Typeface.BOLD);
+            tile.setPadding(4,13,4,13);
+            tile.setBackground(rounded(colors[i],16));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
+            p.setMargins(3,5,3,3);
+            row.addView(tile,p);
+            final String selected=names[i];
+            tile.setOnClickListener(v->showFilteredRecords(selected,filterRows(monthly,4,selected)));
+        }
+        body.addView(row);
+        body.addView(sectionTitle("整改提醒"));
+        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+        List<String[]> overdue=db.incidentsDue(today,0,true);
+        List<String[]> upcoming=db.incidentsDue(today,7,false);
         body.addView(card("逾期未完成整改",db.countOverdue(today)+" 起"));
-        if(!overdue.isEmpty()) body.addView(button("查看逾期事故（"+overdue.size()+"）",()->showFilteredRecords("逾期未完成整改",overdue)));
-        if(!upcoming.isEmpty()) body.addView(button("未来 7 天到期（"+upcoming.size()+"）",()->showFilteredRecords("未来 7 天到期整改",upcoming)));
-        body.addView(sectionTitle("常用功能")); body.addView(button("＋ 登记新事故",this::incidentForm)); body.addView(button("事故档案",this::records)); body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("首页");
+        if(!overdue.isEmpty()) body.addView(button("查看逾期事故（"+overdue.size()+"）",
+            ()->showFilteredRecords("逾期未完成整改",overdue)));
+        if(!upcoming.isEmpty()) body.addView(button("未来 7 天到期（"+upcoming.size()+"）",
+            ()->showFilteredRecords("未来 7 天到期整改",upcoming)));
+        body.addView(sectionTitle("常用功能"));
+        body.addView(button("＋ 登记新事故",this::incidentForm));
+        body.addView(button("事故档案",this::records));
+        body.addView(button("事故报表中心（Excel / PDF）",this::exportCenter));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("首页");
     }
     private boolean validIncidentDate(String value) {
         if(value==null || value.trim().isEmpty()) return false;
