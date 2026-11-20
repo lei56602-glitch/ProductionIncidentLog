@@ -975,8 +975,11 @@ public class MainActivity extends Activity {
         Runnable calculate=() -> {
             result.removeAllViews();
             String f=from.getText().toString().trim(),t=to.getText().toString().trim();
-            if((!f.isEmpty()&&!f.matches("\\d{4}-\\d{2}-\\d{2}"))||(!t.isEmpty()&&!t.matches("\\d{4}-\\d{2}-\\d{2}"))||(!f.isEmpty()&&!t.isEmpty()&&f.compareTo(t)>0)) {
-                Toast.makeText(this,"请检查日期格式及起止顺序（yyyy-MM-dd）",Toast.LENGTH_SHORT).show(); return;
+            if(!validDueDate(f)||!validDueDate(t)) {
+                Toast.makeText(this,"日期无效，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
+            }
+            if(!f.isEmpty()&&!t.isEmpty()&&f.compareTo(t)>0) {
+                Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
             }
             List<String[]> rows=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             TextView totalCard=new TextView(this);
