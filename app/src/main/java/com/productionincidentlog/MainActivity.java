@@ -152,20 +152,45 @@ public class MainActivity extends Activity {
             setTypeface(null,Typeface.BOLD);setPadding(20,28,20,28);setMinHeight(180);}
         @Override protected void onDraw(android.graphics.Canvas canvas){
             float w=getWidth(),h=getHeight();
-            paint.setShader(new android.graphics.LinearGradient(0,0,w,h,0xFF0B58B8,0xFF258DEB,android.graphics.Shader.TileMode.CLAMP));
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+            paint.setShader(new android.graphics.LinearGradient(0,0,w,h,0xFF073D88,0xFF1688D9,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRoundRect(0,0,w,h,24,24,paint);paint.setShader(null);
-            paint.setColor(0x553BBAFF);paint.setStyle(android.graphics.Paint.Style.FILL);
-            float x=w*0.60f;
-            canvas.drawRect(x+18,h*0.30f,x+48,h*0.92f,paint);
-            canvas.drawRect(x+62,h*0.18f,x+91,h*0.92f,paint);
-            canvas.drawRect(x+108,h*0.38f,x+139,h*0.92f,paint);
-            canvas.drawRect(x+154,h*0.24f,x+181,h*0.92f,paint);
-            paint.setColor(0x88D8F1FF);paint.setStrokeWidth(4);paint.setStyle(android.graphics.Paint.Style.STROKE);
-            canvas.drawLine(x+32,h*0.30f,x+32,h*0.12f,paint);canvas.drawLine(x+76,h*0.18f,x+76,h*0.06f,paint);
-            canvas.drawLine(x+122,h*0.38f,x+122,h*0.20f,paint);canvas.drawLine(x+167,h*0.24f,x+167,h*0.10f,paint);
-            canvas.drawLine(x+5,h*0.57f,x+190,h*0.57f,paint);canvas.drawLine(x+5,h*0.72f,x+190,h*0.72f,paint);
-            paint.setStyle(android.graphics.Paint.Style.FILL);paint.setColor(0x44FFFFFF);
-            canvas.drawCircle(x+32,h*0.30f,7,paint);canvas.drawCircle(x+76,h*0.18f,7,paint);canvas.drawCircle(x+122,h*0.38f,7,paint);
+            paint.setColor(0x223BE2FF);
+            canvas.drawCircle(w*0.82f,h*0.18f,h*0.52f,paint);
+            int[] towerX={(int)(w*.53f),(int)(w*.65f),(int)(w*.77f),(int)(w*.88f)};
+            float[] towerTop={.28f,.12f,.34f,.22f};
+            float[] towerWidth={.075f,.055f,.07f,.045f};
+            for(int i=0;i<towerX.length;i++){
+                float x=towerX[i],tw=w*towerWidth[i],top=h*towerTop[i];
+                paint.setColor(i%2==0?0xAA0A376D:0xAA0D477F);
+                canvas.drawRoundRect(x,top,x+tw,h*.91f,tw*.16f,tw*.16f,paint);
+                paint.setColor(0x8899DDFB);
+                paint.setStrokeWidth(1.4f);
+                canvas.drawLine(x+tw*.18f,top+h*.04f,x+tw*.18f,h*.88f,paint);
+                canvas.drawLine(x+tw*.82f,top+h*.04f,x+tw*.82f,h*.88f,paint);
+                for(float yy=top+h*.12f;yy<h*.84f;yy+=h*.13f){
+                    canvas.drawLine(x+tw*.12f,yy,x+tw*.88f,yy,paint);
+                }
+                paint.setColor(0xCCBDEEFF);
+                canvas.drawRect(x+tw*.42f,top-h*.075f,x+tw*.58f,top,paint);
+                canvas.drawLine(x+tw*.5f,top-h*.075f,x+tw*.5f,top-h*.18f,paint);
+                canvas.drawCircle(x+tw*.5f,top-h*.18f,2.5f,paint);
+            }
+            paint.setColor(0x8848B8EA);
+            canvas.drawRect(w*.48f,h*.72f,w*.98f,h*.92f,paint);
+            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            paint.setStrokeWidth(5);
+            paint.setColor(0xAA9BDFFF);
+            canvas.drawLine(w*.49f,h*.58f,w*.98f,h*.58f,paint);
+            canvas.drawLine(w*.51f,h*.74f,w*.98f,h*.74f,paint);
+            canvas.drawLine(w*.57f,h*.58f,w*.57f,h*.91f,paint);
+            canvas.drawLine(w*.72f,h*.58f,w*.72f,h*.91f,paint);
+            canvas.drawLine(w*.84f,h*.58f,w*.84f,h*.91f,paint);
+            paint.setStyle(android.graphics.Paint.Style.FILL);
+            paint.setColor(0xAA052F70);
+            canvas.drawRect(0,h*.82f,w,h,paint);
+            paint.setShader(new android.graphics.LinearGradient(0,0,w*.72f,0,0xBB052E68,0x00052E68,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(0,0,w,h,24,24,paint);paint.setShader(null);
             super.onDraw(canvas);
         }
     }
