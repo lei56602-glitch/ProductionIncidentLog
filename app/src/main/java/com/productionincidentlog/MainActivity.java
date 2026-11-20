@@ -222,11 +222,11 @@ public class MainActivity extends Activity {
         LinearLayout dateInfo=new LinearLayout(this);
         dateInfo.setOrientation(LinearLayout.VERTICAL);
         dateInfo.setGravity(android.view.Gravity.RIGHT);
-        TextView clockText=new TextView(this);
-        clockText.setText(new SimpleDateFormat("HH:mm",Locale.CHINA).format(new Date()));
+        android.widget.TextClock clockText=new android.widget.TextClock(this);
+        clockText.setFormat24Hour("HH:mm");clockText.setFormat12Hour("hh:mm a");
         clockText.setTextColor(0xFFFFFFFF);clockText.setTextSize(22);clockText.setTypeface(null,Typeface.BOLD);
-        TextView dateText=new TextView(this);
-        dateText.setText(new SimpleDateFormat("yyyy年MM月dd日  EEEE",Locale.CHINA).format(new Date()));
+        android.widget.TextClock dateText=new android.widget.TextClock(this);
+        dateText.setFormat24Hour("yyyy年MM月dd日  EEEE");dateText.setFormat12Hour("yyyy年MM月dd日  EEEE");
         dateText.setTextColor(0xFFE3F1FF);dateText.setTextSize(10);
         dateInfo.addView(clockText);dateInfo.addView(dateText);
         android.widget.FrameLayout.LayoutParams dateLp=new android.widget.FrameLayout.LayoutParams(
