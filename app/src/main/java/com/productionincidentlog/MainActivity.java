@@ -237,10 +237,12 @@ public class MainActivity extends Activity {
         dateText.setFormat24Hour("yyyy年MM月dd日  EEEE");dateText.setFormat12Hour("yyyy年MM月dd日  EEEE");
         dateText.setTextColor(0xFFE3F1FF);dateText.setTextSize(10);
         dateInfo.addView(clockText);dateInfo.addView(dateText);
-        android.widget.FrameLayout.LayoutParams dateLp=new android.widget.FrameLayout.LayoutParams(
-            -2,-2,android.view.Gravity.TOP|android.view.Gravity.RIGHT);
-        dateLp.setMargins(0,12,(int)(60*getResources().getDisplayMetrics().density),0);
-        heroFrame.addView(dateInfo,dateLp);
+        // Time and date live below the hero instead of floating over its title.
+        dateInfo.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        clockText.setTextColor(0xFF1556A8);
+        clockText.setTextSize(21);
+        dateText.setTextColor(0xFF60758D);
+        dateText.setTextSize(11);
         TextView gear=new TextView(this);
         gear.setText("⚙"); gear.setTextSize(24); gear.setTextColor(0xFFFFFFFF);
         gear.setGravity(android.view.Gravity.CENTER); gear.setBackground(rounded(0x55304F78,30));
@@ -250,31 +252,51 @@ public class MainActivity extends Activity {
         gearLp.setMargins(0,8,9,0); heroFrame.addView(gear,gearLp);
         gear.setOnClickListener(v->settingsCenter());
         body.addView(heroFrame);
+        LinearLayout timeStrip=new LinearLayout(this);
+        timeStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        timeStrip.setPadding(dp(14),dp(8),dp(14),dp(8));
+        timeStrip.setBackground(rounded(0xFFFFFFFF,dp(14)));
+        LinearLayout.LayoutParams timeLp=new LinearLayout.LayoutParams(-1,-2);
+        timeLp.topMargin=dp(8);
+        body.addView(dateInfo,timeLp);
         body.addView(sectionTitle("快速登记事故"));
-        LinearLayout quick=new LinearLayout(this);
-        quick.setOrientation(LinearLayout.HORIZONTAL);
         String[] types={"设备损伤","物料混料","人员受伤"};
         String[] icons={"🔧","📦","✚"};
         int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
-        for(int i=0;i<types.length;i++) {
-            final String chosen=types[i];
-            TextView tile=new TextView(this);
-            tile.setText(icons[i]+"\n"+types[i]+"\n记录");
-            tile.setGravity(android.view.Gravity.CENTER);
-            tile.setTextColor(ink);
-            tile.setTextSize(14);
-            tile.setTypeface(null,Typeface.BOLD);
-            tile.setPadding(dp(7),dp(14),dp(7),dp(14));
-            tile.setMinHeight(dp(104));
-            tile.setElevation(dp(1));
-            tile.setContentDescription("快速登记"+chosen+"事故");
-            tile.setBackground(rounded(colors[i],dp(16)));
-            tile.setFocusable(true);
-            tile.setClickable(true);
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
-            p.setMargins(4,3,4,3);
-            quick.addView(tile,p);
-            tile.setOnClickListener(v->incidentForm(chosen));
+        int screenWidthDp=getResources().getConfiguration().screenWidthDp;
+        LinearLayout quick=new LinearLayout(this);
+        quick.setOrientation(LinearLayout.VERTICAL);
+        int columns=screenWidthDp<380?2:3;
+        for(int rowIndex=0;rowIndex<(types.length+columns-1)/columns;rowIndex++) {
+            LinearLayout quickRow=new LinearLayout(this);
+            quickRow.setOrientation(LinearLayout.HORIZONTAL);
+            for(int col=0;col<columns;col++) {
+                int i=rowIndex*columns+col;
+                if(i>=types.length) break;
+                final String chosen=types[i];
+                TextView tile=new TextView(this);
+                tile.setText(icons[i]+"\n"+types[i]+"\n登记");
+                tile.setGravity(android.view.Gravity.CENTER);
+                tile.setTextColor(ink);
+                tile.setTextSize(14);
+                tile.setTypeface(null,Typeface.BOLD);
+                tile.setPadding(dp(10),dp(14),dp(10),dp(14));
+                tile.setMinHeight(dp(100));
+                tile.setElevation(dp(1));
+                tile.setContentDescription("快速登记"+chosen+"事故");
+                tile.setBackground(rounded(colors[i],dp(16)));
+                tile.setFocusable(true);
+                tile.setClickable(true);
+                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
+                p.setMargins(dp(4),dp(4),dp(4),dp(4));
+                quickRow.addView(tile,p);
+                tile.setOnClickListener(v->incidentForm(chosen));
+            }
+            if(columns==2 && rowIndex==1 && quickRow.getChildCount()==1) {
+                ViewGroup.LayoutParams only=quickRow.getChildAt(0).getLayoutParams();
+                ((LinearLayout.LayoutParams)only).weight=1;
+            }
+            quick.addView(quickRow);
         }
         body.addView(quick);
         body.addView(button("▥  数据统计 · 查询分析     ›",this::statistics));
@@ -372,8 +394,8 @@ public class MainActivity extends Activity {
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l=new TextView(this); l.setText(label); l.setTextColor(ink); l.setTypeface(null,Typeface.BOLD); l.setTextSize(14); l.setPadding(2,12,2,5); box.addView(l);
         EditText e=new EditText(this); e.setHint(hint); e.setText(initial); e.setMinLines(lines); e.setTextSize(15); e.setTextColor(ink);
-        e.setPadding(14,10,14,10); e.setBackground(rounded(0xFFFFFFFF,15)); e.setElevation(1);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,5); box.addView(e,p); return e;
+        e.setPadding(dp(14),dp(12),dp(14),dp(12)); e.setBackground(rounded(0xFFFFFFFF,dp(14))); e.setElevation(dp(1));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,dp(8)); box.addView(e,p); return e;
     }
     private List<String> catalogChoices(String category,String current) {
         List<String> values=db.catalogNames(category);
@@ -385,8 +407,8 @@ public class MainActivity extends Activity {
         List<String> values=new java.util.ArrayList<>();values.add(allLabel);values.addAll(db.catalogNames(category));return values;
     }
     private Spinner spinner(LinearLayout box, String label, List<String> values) {
-        if(label!=null && !label.isEmpty()){TextView l=new TextView(this);l.setText(label);l.setTextColor(ink);l.setTypeface(null,Typeface.BOLD);l.setTextSize(14);l.setPadding(2,12,2,5);box.addView(l);}
-        Spinner s=new Spinner(this); s.setPadding(8,5,8,5); s.setBackground(rounded(0xFFFFFFFF,14));
+        if(label!=null && !label.isEmpty()){TextView l=new TextView(this);l.setText(label);l.setTextColor(ink);l.setTypeface(null,Typeface.BOLD);l.setTextSize(14);l.setPadding(dp(2),dp(14),dp(2),dp(7));box.addView(l);}
+        Spinner s=new Spinner(this); s.setPadding(dp(12),dp(8),dp(12),dp(8)); s.setMinimumHeight(dp(52)); s.setBackground(rounded(0xFFFFFFFF,dp(14)));
         s.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,values)); box.addView(s); return s;
     }
     private static class IncidentDraft {
@@ -596,9 +618,9 @@ public class MainActivity extends Activity {
                 if(!"全部设备".equals(deviceChoice) && !deviceChoice.equals(r[5])) continue;
                 LinearLayout item=new LinearLayout(this);
                 item.setOrientation(LinearLayout.VERTICAL);
-                item.setPadding(14,12,14,12);
-                item.setBackground(rounded(0xFFFFFFFF,17));
-                item.setElevation(1);
+                item.setPadding(dp(16),dp(14),dp(16),dp(14));
+                item.setBackground(rounded(0xFFFFFFFF,dp(16)));
+                item.setElevation(dp(1));
                 LinearLayout top=new LinearLayout(this);
                 top.setGravity(android.view.Gravity.CENTER_VERTICAL);
                 TextView code=new TextView(this);
@@ -613,9 +635,9 @@ public class MainActivity extends Activity {
                 status.setTypeface(null,Typeface.BOLD);
                 status.setTextColor("已完成".equals(r[14])?0xFF16865B:
                     ("整改中".equals(r[14])?0xFFB7791F:0xFF1769AA));
-                status.setPadding(10,5,10,5);
+                status.setPadding(dp(10),dp(6),dp(10),dp(6));
                 status.setBackground(rounded("已完成".equals(r[14])?0xFFDDF5E9:
-                    ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
+                    ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),dp(18)));
                 top.addView(status);
                 item.addView(top);
                 if(isRemediationOverdue(r[13],r[14])) {
