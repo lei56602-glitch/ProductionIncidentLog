@@ -17,6 +17,8 @@ public class MainActivity extends Activity {
     private IncidentDb db;
     private LinearLayout root;
     private final int ink = 0xFF17324D, blue = 0xFF1769AA, bg = 0xFFF2F7FC;
+    private List<android.net.Uri> pendingAttachments = new java.util.ArrayList<>();
+    private static final int REQUEST_ATTACHMENTS = 4102;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); db = new IncidentDb(this); dashboard();
@@ -65,6 +67,7 @@ public class MainActivity extends Activity {
         s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values)); box.addView(s); return s;
     }
     private void incidentForm() {
+        pendingAttachments = new java.util.ArrayList<>();
         page("登记生产事故");
         ScrollView scroll = new ScrollView(this);
         LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
@@ -84,6 +87,15 @@ public class MainActivity extends Activity {
         EditText prevention = field(form,"五、未来如何避免","长期整改和预防措施","",3);
         EditText owner = field(form,"整改负责人","负责推动整改的人","",1);
         EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
+        TextView attachmentHint = new TextView(this); attachmentHint.setText("现场照片 / 视频：可在保存前选择附件"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        form.addView(button("选择现场照片或视频（可多选）", () -> {
+            android.content.Intent pick = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+            pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
+            pick.putExtra(android.content.Intent.EXTRA_MIME_TYPES, new String[]{"image/*","video/*"});
+            pick.putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true);
+            pick.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(pick, REQUEST_ATTACHMENTS);
+        }));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("保存事故档案", () -> {
             if (date.getText().toString().trim().isEmpty() || description.getText().toString().trim().isEmpty()
@@ -95,7 +107,12 @@ public class MainActivity extends Activity {
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),
                 people.getText().toString(),description.getText().toString(),analysis.getText().toString(),
                 cause.getText().toString(),action.getText().toString(),prevention.getText().toString(),owner.getText().toString(),dueDate.getText().toString());
-            Toast.makeText(this,"保存成功："+code,Toast.LENGTH_LONG).show(); dashboard();
+            for (android.net.Uri uri : pendingAttachments) {
+                try { getContentResolver().takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (SecurityException ignored) { }
+                String mime = getContentResolver().getType(uri);
+                db.addAttachment(code, uri.toString(), mime == null ? "application/octet-stream" : mime);
+            }
+            Toast.makeText(this,"保存成功："+code+"，附件 "+pendingAttachments.size()+" 个",Toast.LENGTH_LONG).show(); dashboard();
         }));
         root.addView(button("返回首页",this::dashboard));
     }
@@ -115,8 +132,10 @@ public class MainActivity extends Activity {
                         +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n整改负责人："+r[12]+"\n整改期限："+r[13]+"\n整改状态："+r[14];
                     TextView detailView = new TextView(this); detailView.setText(detail); detailView.setTextSize(16); detailView.setPadding(24,20,24,20);
                     ScrollView sv = new ScrollView(this); sv.addView(detailView);
+                    List<String[]> attachments = db.attachments(r[0]);
                     new AlertDialog.Builder(this).setTitle(r[0]).setView(sv)
                         .setPositiveButton("关闭",null)
+                        .setNegativeButton("查看附件（"+attachments.size()+"）",(dialog,which) -> showAttachments(r[0]))
                         .setNeutralButton("更新整改状态",(dialog,which) -> {
                             String[] states={"待整改","整改中","已完成"};
                             new AlertDialog.Builder(this).setTitle("选择整改状态")
@@ -247,6 +266,24 @@ public class MainActivity extends Activity {
         root.addView(button("返回首页",this::dashboard));
     }
 
+    private void showAttachments(String code) {
+        List<String[]> items = db.attachments(code);
+        if (items.isEmpty()) { new AlertDialog.Builder(this).setMessage("该事故没有现场照片或视频附件。").setPositiveButton("关闭",null).show(); return; }
+        String[] labels = new String[items.size()];
+        for (int i=0;i<items.size();i++) labels[i] = (items.get(i)[1].startsWith("video/") ? "视频 " : "照片 / 文件 ") + (i+1);
+        new AlertDialog.Builder(this).setTitle("现场附件").setItems(labels,(dialog,index) -> {
+            try { android.net.Uri uri=android.net.Uri.parse(items.get(index)[0]); android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW); view.setDataAndType(uri,items.get(index)[1]); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view); }
+            catch (Exception e) { Toast.makeText(this,"无法打开附件："+e.getMessage(),Toast.LENGTH_LONG).show(); }
+        }).setPositiveButton("关闭",null).show();
+    }
+    @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=REQUEST_ATTACHMENTS || resultCode!=RESULT_OK || data==null) return;
+        if(data.getClipData()!=null) { android.content.ClipData clip=data.getClipData(); for(int i=0;i<clip.getItemCount();i++) addPendingAttachment(clip.getItemAt(i).getUri()); }
+        else if(data.getData()!=null) addPendingAttachment(data.getData());
+        Toast.makeText(this,"已选择 "+pendingAttachments.size()+" 个附件",Toast.LENGTH_SHORT).show();
+    }
+    private void addPendingAttachment(android.net.Uri uri) { if(uri!=null && !pendingAttachments.contains(uri)) pendingAttachments.add(uri); }
     private void shareExport(java.io.File file, String mime) {
         android.net.Uri uri=androidx.core.content.FileProvider.getUriForFile(this,
             getPackageName()+".fileprovider",file);
