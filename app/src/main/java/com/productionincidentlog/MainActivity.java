@@ -477,7 +477,7 @@ public class MainActivity extends Activity {
             pick.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION|android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
             startActivityForResult(pick,REQUEST_ATTACHMENTS);
         }));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         root.addView(button("下一步：事故分析",()->{
             if(!validIncidentDate(date.getText().toString())){Toast.makeText(this,"发生时间格式错误，请使用 yyyy-MM-dd HH:mm",Toast.LENGTH_SHORT).show();return;}
             draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
@@ -498,7 +498,7 @@ public class MainActivity extends Activity {
         EditText prevention=field(form,"未来如何避免 *","预防措施和改进方案",draft.prevention==null?"":draft.prevention,3);
         EditText owner=field(form,"整改负责人","负责推动整改的人",draft.owner==null?"":draft.owner,1);
         EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",draft.dueDate==null?"":draft.dueDate,1);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         root.addView(button("下一步：确认提交",()->{
             if(description.getText().toString().trim().isEmpty()||analysis.getText().toString().trim().isEmpty()
                 ||cause.getText().toString().trim().isEmpty()||action.getText().toString().trim().isEmpty()
@@ -732,7 +732,7 @@ public class MainActivity extends Activity {
         teamFilter.setOnItemSelectedListener(filterListener);
         deviceFilter.setOnItemSelectedListener(filterListener);
         refresh.run();
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         addBottomNav("记录");
     }
     private LinearLayout detailInfoCard(String title,String value,int accent) {
@@ -886,7 +886,7 @@ public class MainActivity extends Activity {
         if(events.isEmpty()) history.append("暂无状态变更记录");
         else for(String[] e:events) history.append(e[2]).append("  ").append(e[0]).append(" → ").append(e[1]).append("\n");
         body.addView(detailInfoCard("整改状态变更记录",history.toString(),0xFF7C5CE7));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         root.addView(button("更新整改状态",()->{
             String[] states={"待整改","整改中","已完成"};
             new AlertDialog.Builder(this).setTitle("更新整改状态").setItems(states,(d,index)->{
@@ -929,7 +929,7 @@ public class MainActivity extends Activity {
         EditText owner = field(form,"整改负责人","负责推动整改的人",r[12],1);
         EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",r[13],1);
         TextView status = new TextView(this); status.setText("当前整改状态："+r[14]+"（状态可在详情中单独更新）"); status.setTextColor(ink); status.setPadding(4,12,4,12); form.addView(status);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         root.addView(button("保存修改",() -> {
             String d=date.getText().toString().trim();
             if(!validIncidentDate(d) || description.getText().toString().trim().isEmpty() || analysis.getText().toString().trim().isEmpty()
@@ -1017,7 +1017,7 @@ public class MainActivity extends Activity {
             });
         }
         ScrollView scroll=new ScrollView(this);scroll.addView(content);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         addBottomNav("我的");
     }
     private LinearLayout settingsGroup(LinearLayout body,String title,String subtitle) {
@@ -1107,7 +1107,7 @@ public class MainActivity extends Activity {
         system.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
             .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addAdaptiveScroll(scroll);
         addBottomNav("我的");
     }
     private void equipment() {
@@ -1232,7 +1232,7 @@ public class MainActivity extends Activity {
         team.setOnItemSelectedListener(statsFilterListener); area.setOnItemSelectedListener(statsFilterListener);
         type.setOnItemSelectedListener(statsFilterListener); equipment.setOnItemSelectedListener(statsFilterListener);
         status.setOnItemSelectedListener(statsFilterListener); calculate.run();
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("统计");
+        addAdaptiveScroll(scroll); addBottomNav("统计");
     }
 
     private String[] uniqueColumnValues(List<String[]> rows,int column) {
@@ -1289,7 +1289,7 @@ public class MainActivity extends Activity {
             }));
         }
         if(rows.isEmpty()) list.addView(card("暂无明细","当前分类没有事故记录"));
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); root.addView(button("返回统计",this::statistics));
+        addAdaptiveScroll(scroll); root.addView(button("返回统计",this::statistics));
     }
 
     private void exportCenter() {
