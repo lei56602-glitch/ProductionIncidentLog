@@ -502,6 +502,37 @@ public class MainActivity extends Activity {
         zip.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         zip.closeEntry();
     }
+    private void appendAttachmentHashes(java.io.File root,java.io.File current,org.json.JSONArray output) throws Exception {
+        java.io.File[] children=current.listFiles();
+        if(children==null) return;
+        for(java.io.File child:children) {
+            if(child.isDirectory()) appendAttachmentHashes(root,child,output);
+            else {
+                String relative=root.toURI().relativize(child.toURI()).getPath();
+                org.json.JSONObject item=new org.json.JSONObject();
+                item.put("path",relative);
+                item.put("size",child.length());
+                item.put("sha256",sha256(child));
+                output.put(item);
+            }
+        }
+    }
+    private void validateAttachmentHashes(java.io.File root,org.json.JSONArray expected) throws Exception {
+        java.util.HashSet<String> seen=new java.util.HashSet<>();
+        for(int i=0;i<expected.length();i++) {
+            org.json.JSONObject item=expected.getJSONObject(i);
+            String relative=item.optString("path","");
+            if(relative.isEmpty() || relative.startsWith("/") || relative.contains("..") || relative.contains("\\") || !seen.add(relative))
+                throw new java.io.IOException("附件校验清单路径无效");
+            java.io.File file=new java.io.File(root,relative);
+            if(!file.getCanonicalPath().startsWith(root.getCanonicalPath()+java.io.File.separator) || !file.isFile())
+                throw new java.io.IOException("备份缺少附件："+relative);
+            if(file.length()!=item.optLong("size",-1) || !sha256(file).equals(item.optString("sha256","")))
+                throw new java.io.IOException("附件 SHA-256 校验失败："+relative);
+        }
+        long[] actual=attachmentStats(root);
+        if(actual[0]!=expected.length()) throw new java.io.IOException("备份包含未登记或缺失的附件文件");
+    }
     private void exportBackup(android.net.Uri destination) {
         boolean closed=false;
         try {
@@ -517,7 +548,16 @@ public class MainActivity extends Activity {
             java.io.File database=getDatabasePath("production_incidents.db");
             if(!database.isFile()) throw new java.io.IOException("数据库文件不存在，无法备份");
             long[] stats=attachmentStats(attachmentDirectory());
-            String manifest="{\"format_version\":1,\"database\":\"production_incidents.db\",\"database_sha256\":\""+sha256(database)+"\",\"attachment_file_count\":"+stats[0]+",\"attachment_total_bytes\":"+stats[1]+"}";
+            org.json.JSONObject manifestObject=new org.json.JSONObject();
+            manifestObject.put("format_version",1);
+            manifestObject.put("database","production_incidents.db");
+            manifestObject.put("database_sha256",sha256(database));
+            manifestObject.put("attachment_file_count",stats[0]);
+            manifestObject.put("attachment_total_bytes",stats[1]);
+            org.json.JSONArray attachmentHashes=new org.json.JSONArray();
+            appendAttachmentHashes(attachmentDirectory(),attachmentDirectory(),attachmentHashes);
+            manifestObject.put("attachments",attachmentHashes);
+            String manifest=manifestObject.toString();
             java.io.OutputStream raw=getContentResolver().openOutputStream(destination);
             if(raw==null) throw new java.io.IOException("无法创建目标备份文件");
             try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(raw)) {
@@ -616,6 +656,10 @@ public class MainActivity extends Activity {
             long[] stats=attachmentStats(restoredAttachments);
             if(stats[0]!=manifest.optLong("attachment_file_count",-1) || stats[1]!=manifest.optLong("attachment_total_bytes",-1))
                 throw new java.io.IOException("附件数量或总大小校验失败，拒绝恢复");
+            org.json.JSONArray expectedAttachments=manifest.optJSONArray("attachments");
+            if(expectedAttachments==null || expectedAttachments.length()!=stats[0])
+                throw new java.io.IOException("附件 SHA-256 清单缺失或不完整");
+            validateAttachmentHashes(restoredAttachments,expectedAttachments);
             android.database.sqlite.SQLiteDatabase check=android.database.sqlite.SQLiteDatabase.openDatabase(
                 restoredDb.getAbsolutePath(),null,android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
             try {
