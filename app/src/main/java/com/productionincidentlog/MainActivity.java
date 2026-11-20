@@ -905,7 +905,7 @@ public class MainActivity extends Activity {
             final int index=option;
             TextView choice=new TextView(this);
             reportCards[option]=choice;
-            choice.setText((option==0?"▣":option==1?"▣":"▦")+"   "+reportTitles[option]+"\\n       "+reportSubtitles[option]+"\\n");
+            choice.setText((option==0?"▣":option==1?"▣":"▦")+"   "+reportTitles[option]+"\n       "+reportSubtitles[option]+"\n");
             choice.setTextColor(ink);
             choice.setTextSize(14);
             choice.setTypeface(null,Typeface.BOLD);
