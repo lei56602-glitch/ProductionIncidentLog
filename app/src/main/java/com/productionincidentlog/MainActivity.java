@@ -169,6 +169,15 @@ public class MainActivity extends Activity {
             super.onDraw(canvas);
         }
     }
+    private TextView dashboardMetric(String icon,String label,int count,int background) {
+        TextView tile=new TextView(this);
+        tile.setText(icon+"\\n"+label+"\\n"+count+" 起");
+        tile.setGravity(android.view.Gravity.CENTER);
+        tile.setTextColor(ink); tile.setTextSize(14); tile.setTypeface(null,Typeface.BOLD);
+        tile.setPadding(5,13,5,13); tile.setBackground(rounded(background,16));
+        return tile;
+    }
+
     private void dashboard() {
         page("生产事故管理系统");
         ScrollView scroll=new ScrollView(this);
@@ -207,37 +216,39 @@ public class MainActivity extends Activity {
         String month=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
         List<String[]> monthly=db.incidentsFiltered(month+"-01",month+"-31",
             "全部班组","全部区域","全部类型","全部设备");
-        TextView total=new TextView(this);
-        total.setText("本月事故总数\n"+monthly.size()+" 起");
-        total.setTextColor(0xFFFFFFFF);
-        total.setTextSize(22);
-        total.setTypeface(null,Typeface.BOLD);
-        total.setPadding(18,17,18,17);
-        total.setBackground(rounded(0xFF1677EB,20));
-        total.setOnClickListener(v->showFilteredRecords("本月事故记录",monthly));
-        body.addView(total);
-        LinearLayout row=new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        String[] names={"设备损伤","物料混料","人员受伤"};
-        String[] typeIcons={"🔧","📦","✚"};
-        for(int i=0;i<names.length;i++) {
-            int n=0;
-            for(String[] r:monthly) if(names[i].equals(r[4])) n++;
-            TextView tile=new TextView(this);
-            tile.setText(typeIcons[i]+"\n"+names[i]+"\n"+n+" 起");
-            tile.setGravity(android.view.Gravity.CENTER);
-            tile.setTextColor(ink);
-            tile.setTextSize(13);
-            tile.setTypeface(null,Typeface.BOLD);
-            tile.setPadding(4,13,4,13);
-            tile.setBackground(rounded(colors[i],16));
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1);
-            p.setMargins(3,5,3,3);
-            row.addView(tile,p);
-            final String selected=names[i];
-            tile.setOnClickListener(v->showFilteredRecords(selected,filterRows(monthly,4,selected)));
+        int deviceCount=0,materialCount=0,injuryCount=0;
+        for(String[] incident:monthly) {
+            if("设备损伤".equals(incident[4])) deviceCount++;
+            else if("物料混料".equals(incident[4])) materialCount++;
+            else if("人员受伤".equals(incident[4])) injuryCount++;
         }
-        body.addView(row);
+        LinearLayout overview=new LinearLayout(this);
+        overview.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout overviewTop=new LinearLayout(this);
+        overviewTop.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout overviewBottom=new LinearLayout(this);
+        overviewBottom.setOrientation(LinearLayout.HORIZONTAL);
+        TextView totalTile=new TextView(this);
+        totalTile.setText("▤\\n事故总数\\n"+monthly.size()+" 起");
+        totalTile.setGravity(android.view.Gravity.CENTER);
+        totalTile.setTextColor(0xFF125FC4); totalTile.setTextSize(15);
+        totalTile.setTypeface(null,Typeface.BOLD); totalTile.setPadding(5,13,5,13);
+        totalTile.setBackground(rounded(0xFFE7F0FF,16));
+        totalTile.setOnClickListener(v->showFilteredRecords("本月事故记录",monthly));
+        TextView deviceTile=dashboardMetric("🔧","设备损伤",deviceCount,0xFFFFF0DF);
+        deviceTile.setOnClickListener(v->showFilteredRecords("设备损伤",filterRows(monthly,4,"设备损伤")));
+        TextView materialTile=dashboardMetric("📦","物料混料",materialCount,0xFFE7F8F0);
+        materialTile.setOnClickListener(v->showFilteredRecords("物料混料",filterRows(monthly,4,"物料混料")));
+        TextView injuryTile=dashboardMetric("✚","人员受伤",injuryCount,0xFFFFEDEF);
+        injuryTile.setOnClickListener(v->showFilteredRecords("人员受伤",filterRows(monthly,4,"人员受伤")));
+        for(TextView tile:new TextView[]{totalTile,deviceTile}) {
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,4,3,4); overviewTop.addView(tile,p);
+        }
+        for(TextView tile:new TextView[]{materialTile,injuryTile}) {
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,4,3,4); overviewBottom.addView(tile,p);
+        }
+        overview.addView(overviewTop); overview.addView(overviewBottom);
+        body.addView(overview);
         body.addView(sectionTitle("整改提醒"));
         String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
         List<String[]> overdue=db.incidentsDue(today,0,true);
