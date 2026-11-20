@@ -873,8 +873,14 @@ public class MainActivity extends Activity {
         body.addView(sectionTitle("统计分析概览"));
         TextView intro=new TextView(this); intro.setText("按时间、班组、区域、事故类型和设备组合筛选，点击统计项目可查看事故明细。"); intro.setTextColor(0xFF64748B); intro.setTextSize(13); intro.setPadding(8,2,8,10); body.addView(intro);
         String today=new SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(new Date());
+        int fromLabelIndex=body.getChildCount();
         EditText from=field(body,"开始日期（yyyy-MM-dd）","留空表示不限",today.substring(0,8)+"01",1);
+        android.view.View fromLabel=body.getChildAt(fromLabelIndex);
+        int toLabelIndex=body.getChildCount();
         EditText to=field(body,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        android.view.View toLabel=body.getChildAt(toLabelIndex);
+        fromLabel.setVisibility(android.view.View.GONE); from.setVisibility(android.view.View.GONE);
+        toLabel.setVisibility(android.view.View.GONE); to.setVisibility(android.view.View.GONE);
         LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
         String[] rangeNames={"本月","本季度","本年度","自定义"};
         TextView[] rangeChips=new TextView[rangeNames.length];
@@ -882,7 +888,9 @@ public class MainActivity extends Activity {
             chip.setTextColor(blue);chip.setTextSize(13);chip.setTypeface(null,Typeface.BOLD);chip.setPadding(5,12,5,12);chip.setBackground(rounded(mode==0?0xFF1677EB:0xFFE7F0FF,16));if(mode==0)chip.setTextColor(0xFFFFFFFF);
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.setMargins(3,4,3,8);ranges.addView(chip,cp);
             chip.setOnClickListener(v->{for(int k=0;k<rangeChips.length;k++){rangeChips[k].setBackground(rounded(k==mode?0xFF1677EB:0xFFE7F0FF,16));rangeChips[k].setTextColor(k==mode?0xFFFFFFFF:blue);}
-                if(mode==3){from.requestFocus();return;}Calendar cal=Calendar.getInstance();cal.setTime(new Date());
+                if(mode==3){fromLabel.setVisibility(android.view.View.VISIBLE);from.setVisibility(android.view.View.VISIBLE);toLabel.setVisibility(android.view.View.VISIBLE);to.setVisibility(android.view.View.VISIBLE);from.requestFocus();return;}
+                fromLabel.setVisibility(android.view.View.GONE);from.setVisibility(android.view.View.GONE);toLabel.setVisibility(android.view.View.GONE);to.setVisibility(android.view.View.GONE);
+                Calendar cal=Calendar.getInstance();cal.setTime(new Date());
                 if(mode==0)cal.set(Calendar.DAY_OF_MONTH,1);else if(mode==1){int q=cal.get(Calendar.MONTH)/3;cal.set(Calendar.MONTH,q*3);cal.set(Calendar.DAY_OF_MONTH,1);}
                 else{cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);}
                 from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));to.setText(today);});
