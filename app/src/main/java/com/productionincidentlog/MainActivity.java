@@ -138,18 +138,51 @@ public class MainActivity extends Activity {
         root.addView(button("返回首页",this::dashboard));
     }
     private void statistics() {
-        page("统计概览");
-        root.addView(card("事故总数",db.countAll()+" 起"));
-        for (String t : new String[]{"设备损伤","物料混料","人员受伤"}) root.addView(card(t,db.countType(t)+" 起"));
-        List<String[]> rows = db.incidents("");
-        for (String team : new String[]{"A班","B班"}) {
-            int n=0; for(String[] r:rows) if(team.equals(r[2])) n++;
-            root.addView(card(team,n+" 起"));
-        }
-        for (String area : new String[]{"造粒","仓库"}) {
-            int n=0; for(String[] r:rows) if(area.equals(r[3])) n++;
-            root.addView(card(area,n+" 起"));
-        }
+        page("多条件事故统计");
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(body);
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+        String monthStart = today.substring(0,8) + "01";
+        EditText from = field(body,"开始日期（yyyy-MM-dd）","2026-11-01",monthStart,1);
+        EditText to = field(body,"结束日期（yyyy-MM-dd）","2026-11-30",today,1);
+        Spinner team = spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
+        Spinner area = spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner type = spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        List<String> equipmentOptions = new java.util.ArrayList<>();
+        equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
+        Spinner equipment = spinner(body,"设备",equipmentOptions);
+        LinearLayout result = new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL);
+        Runnable calculate = () -> {
+            result.removeAllViews();
+            String startDate=from.getText().toString().trim(), endDate=to.getText().toString().trim();
+            if ((!startDate.isEmpty() && !startDate.matches("\\d{4}-\\d{2}-\\d{2}")) ||
+                (!endDate.isEmpty() && !endDate.matches("\\d{4}-\\d{2}-\\d{2}"))) {
+                Toast.makeText(this,"日期格式请使用 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
+            }
+            List<String[]> rows=db.incidentsFiltered(startDate,endDate,team.getSelectedItem().toString(),
+                area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
+            result.addView(card("筛选结果",rows.size()+" 起事故"));
+            for(String t:new String[]{"设备损伤","物料混料","人员受伤"}) {
+                int n=0; for(String[] r:rows) if(t.equals(r[4])) n++;
+                result.addView(card(t,n+" 起"));
+            }
+            for(String t:new String[]{"A班","B班"}) {
+                int n=0; for(String[] r:rows) if(t.equals(r[2])) n++;
+                result.addView(card(t,n+" 起"));
+            }
+            for(String t:new String[]{"造粒","仓库"}) {
+                int n=0; for(String[] r:rows) if(t.equals(r[3])) n++;
+                result.addView(card(t,n+" 起"));
+            }
+            java.util.Map<String,Integer> ranking=new java.util.TreeMap<>();
+            for(String[] r:rows) ranking.put(r[5],ranking.containsKey(r[5])?ranking.get(r[5])+1:1);
+            result.addView(card("设备事故分布",ranking.isEmpty()?"暂无记录":ranking.toString()));
+        };
+        body.addView(button("应用筛选并统计",calculate));
+        body.addView(result);
+        calculate.run();
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("返回首页",this::dashboard));
     }
     @Override protected void onDestroy() { if (db!=null) db.close(); super.onDestroy(); }
