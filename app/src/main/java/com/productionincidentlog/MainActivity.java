@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
             paint.setStyle(android.graphics.Paint.Style.FILL);
             if(background!=null&&!background.isRecycled()){
                 int save=canvas.save();
-                canvas.clipRoundRect(0,0,w,h,24,24);
+                android.graphics.Path clip=new android.graphics.Path();clip.addRoundRect(0,0,w,h,24,24,android.graphics.Path.Direction.CW);canvas.clipPath(clip);
                 float scale=Math.max(w/background.getWidth(),h/background.getHeight());
                 float dw=background.getWidth()*scale,dh=background.getHeight()*scale;
                 android.graphics.RectF dst=new android.graphics.RectF((w-dw)/2f,(h-dh)/2f,(w+dw)/2f,(h+dh)/2f);
