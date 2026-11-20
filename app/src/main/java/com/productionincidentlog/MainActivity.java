@@ -612,7 +612,9 @@ public class MainActivity extends Activity {
     private void statistics() {
         page("多条件事故统计");
         ScrollView scroll=new ScrollView(this);
-        LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(4,8,4,12); scroll.addView(body);
+        body.addView(sectionTitle("统计分析概览"));
+        TextView intro=new TextView(this); intro.setText("按时间、班组、区域、事故类型和设备组合筛选，点击统计项目可查看事故明细。"); intro.setTextColor(0xFF64748B); intro.setTextSize(13); intro.setPadding(8,2,8,10); body.addView(intro);
         String today=new SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(new Date());
         EditText from=field(body,"开始日期（yyyy-MM-dd）","留空表示不限",today.substring(0,8)+"01",1);
         EditText to=field(body,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
@@ -627,12 +629,13 @@ public class MainActivity extends Activity {
                 from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));to.setText(today);});
         }
         body.addView(ranges);
+        body.addView(sectionTitle("筛选条件"));
         Spinner team=spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
         Spinner area=spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
         Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         List<String> equipmentOptions=new java.util.ArrayList<>(); equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
         Spinner equipment=spinner(body,"设备",equipmentOptions);
-        LinearLayout result=new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout result=new LinearLayout(this); result.setOrientation(LinearLayout.VERTICAL); result.setPadding(5,8,5,8);
         Runnable calculate=() -> {
             result.removeAllViews();
             String f=from.getText().toString().trim(),t=to.getText().toString().trim();
@@ -717,13 +720,16 @@ public class MainActivity extends Activity {
 
     private void exportCenter() {
         page("事故报表中心");
+        ScrollView reportScroll=new ScrollView(this);
+        LinearLayout reportBody=new LinearLayout(this); reportBody.setOrientation(LinearLayout.VERTICAL); reportBody.setPadding(5,8,5,12); reportScroll.addView(reportBody);
         TextView tip = new TextView(this);
         tip.setText("按发生日期筛选事故。Excel 文件包含事故汇总、详细记录、统计分析三个工作表；PDF 用于查看和打印。");
-        tip.setTextColor(ink); tip.setTextSize(15); root.addView(tip);
+        tip.setTextColor(0xFF64748B); tip.setTextSize(14); tip.setPadding(10,8,10,12); reportBody.addView(tip);
+        reportBody.addView(sectionTitle("报表筛选"));
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
         String monthStart = today.substring(0,8) + "01";
-        EditText from = field(root,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
-        EditText to = field(root,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        EditText from = field(reportBody,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
+        EditText to = field(reportBody,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
         LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
         String[] rangeNames={"本月","本季度","本年度","自定义"};
         for(int ri=0;ri<rangeNames.length;ri++){ final int mode=ri; TextView chip=new TextView(this); chip.setText(rangeNames[ri]); chip.setGravity(android.view.Gravity.CENTER);
@@ -736,14 +742,14 @@ public class MainActivity extends Activity {
                 from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime())); to.setText(today);
             });
         }
-        root.addView(ranges);
-        Spinner team = spinner(root,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
-        Spinner area = spinner(root,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
-        Spinner type = spinner(root,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        reportBody.addView(ranges);
+        Spinner team = spinner(reportBody,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
+        Spinner area = spinner(reportBody,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner type = spinner(reportBody,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         List<String> equipmentOptions = new java.util.ArrayList<>();
         equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
-        Spinner equipment = spinner(root,"设备名称",equipmentOptions);
-        TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); root.addView(count);
+        Spinner equipment = spinner(reportBody,"设备名称",equipmentOptions);
+        TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); reportBody.addView(count);
         final List<String[]>[] selected = new List[]{new java.util.ArrayList<String[]>()};
         Runnable load = () -> {
             String f=from.getText().toString().trim(), t=to.getText().toString().trim();
@@ -758,21 +764,25 @@ public class MainActivity extends Activity {
                 area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             count.setText("当前符合条件："+selected[0].size()+" 起事故");
         };
-        root.addView(button("查询报表范围",load));
-        root.addView(button("导出 Excel（三个工作表）",() -> {
+        reportBody.addView(button("查询报表范围",load));
+        reportBody.addView(button("导出 Excel（三个工作表）",() -> {
             load.run();
             try {
                 java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
                 shareExport(file,"application/vnd.ms-excel");
             } catch(Exception e) { Toast.makeText(this,"Excel 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
         }));
-        root.addView(button("生成 PDF 事故报告",() -> {
+        reportBody.addView(button("生成 PDF 事故报告",() -> {
             load.run();
             try {
                 java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
                 shareExport(file,"application/pdf");
             } catch(Exception e) { Toast.makeText(this,"PDF 导出失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
         }));
+        reportBody.addView(sectionTitle("导出格式"));
+        reportBody.addView(card("PDF 事故报告","适合查看、归档和打印"));
+        reportBody.addView(card("Excel 统计报表","包含汇总、详细记录和统计分析三个工作表"));
+        root.addView(reportScroll,new LinearLayout.LayoutParams(-1,0,1));
         addBottomNav("记录");
     }
 
