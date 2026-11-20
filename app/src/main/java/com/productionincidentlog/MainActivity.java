@@ -208,6 +208,12 @@ public class MainActivity extends Activity {
         String monthStart = today.substring(0,8) + "01";
         EditText from = field(root,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
         EditText to = field(root,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        Spinner team = spinner(root,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
+        Spinner area = spinner(root,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
+        Spinner type = spinner(root,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        List<String> equipmentOptions = new java.util.ArrayList<>();
+        equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
+        Spinner equipment = spinner(root,"设备名称",equipmentOptions);
         TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); root.addView(count);
         final List<String[]>[] selected = new List[]{new java.util.ArrayList<String[]>()};
         Runnable load = () -> {
@@ -219,7 +225,8 @@ public class MainActivity extends Activity {
             if (!f.isEmpty() && !t.isEmpty() && f.compareTo(t)>0) {
                 Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
             }
-            selected[0]=db.incidentsFiltered(f,t,"全部班组","全部区域","全部类型","全部设备");
+            selected[0]=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),
+                area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
             count.setText("当前符合条件："+selected[0].size()+" 起事故");
         };
         root.addView(button("查询报表范围",load));
