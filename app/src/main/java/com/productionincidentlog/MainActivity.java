@@ -329,42 +329,111 @@ public class MainActivity extends Activity {
     }
     private void records() {
         page("事故记录");
-        EditText search=new EditText(this); search.setSingleLine(true); search.setHint("⌕ 搜索编号、设备、类型或事故经过");
-        search.setTextSize(15); search.setPadding(14,8,14,8); search.setBackground(rounded(0xFFFFFFFF,18)); root.addView(search);
-        LinearLayout filters=new LinearLayout(this); filters.setOrientation(LinearLayout.HORIZONTAL);
+        EditText search=new EditText(this);
+        search.setSingleLine(true);
+        search.setHint("⌕ 搜索编号、设备、类型或事故经过");
+        search.setTextSize(15);
+        search.setPadding(14,8,14,8);
+        search.setBackground(rounded(0xFFFFFFFF,18));
+        root.addView(search);
+        LinearLayout filters=new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
         Spinner timeFilter=spinner(filters,"",java.util.Arrays.asList("全部时间","本月","本季度","本年度"));
         Spinner typeFilter=spinner(filters,"",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
         Spinner areaFilter=spinner(filters,"",java.util.Arrays.asList("全部区域","造粒","仓库"));
         root.addView(filters);
-        LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        ScrollView scroll=new ScrollView(this); scroll.addView(list);
+        TextView countLabel=new TextView(this);
+        countLabel.setTextColor(ink);
+        countLabel.setTextSize(13);
+        countLabel.setPadding(4,7,4,5);
+        root.addView(countLabel);
+        LinearLayout list=new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        ScrollView scroll=new ScrollView(this);
+        scroll.addView(list);
         Runnable refresh=()->{
-            list.removeAllViews(); List<String[]> rows=db.incidents(search.getText().toString());
-            String period=timeFilter.getSelectedItem().toString(), typeChoice=typeFilter.getSelectedItem().toString(), areaChoice=areaFilter.getSelectedItem().toString();
+            list.removeAllViews();
+            List<String[]> rows=db.incidents(search.getText().toString());
+            String period=timeFilter.getSelectedItem().toString();
+            String typeChoice=typeFilter.getSelectedItem().toString();
+            String areaChoice=areaFilter.getSelectedItem().toString();
             String currentMonth=new SimpleDateFormat("yyyy-MM",Locale.US).format(new Date());
-            Calendar calendar=Calendar.getInstance(); int currentYear=calendar.get(Calendar.YEAR), quarterStart=(calendar.get(Calendar.MONTH)/3)*3+1;
-            for(String[] r:rows){
-                String occurred=r[1]==null?"":r[1]; String day=occurred.length()>=10?occurred.substring(0,10):"";
+            Calendar calendar=Calendar.getInstance();
+            int currentYear=calendar.get(Calendar.YEAR);
+            int quarterStart=(calendar.get(Calendar.MONTH)/3)*3+1;
+            int shown=0;
+            for(String[] r:rows) {
+                String occurred=r[1]==null?"":r[1];
+                String day=occurred.length()>=10?occurred.substring(0,10):"";
                 if("本月".equals(period) && !occurred.startsWith(currentMonth)) continue;
-                if("本季度".equals(period) && (day.length()<7 || !day.startsWith(String.format(Locale.US,"%04d-",currentYear)) || Integer.parseInt(day.substring(5,7))<quarterStart)) continue;
+                if("本季度".equals(period) && (day.length()<7 ||
+                    !day.startsWith(String.format(Locale.US,"%04d-",currentYear)) ||
+                    Integer.parseInt(day.substring(5,7))<quarterStart)) continue;
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
                 if(!"全部区域".equals(areaChoice) && !areaChoice.equals(r[3])) continue;
-                TextView item=card(r[0]+"   ·   "+r[14],r[1]+"  ·  "+r[2]+"班  ·  "+r[3]+"\n"+r[4]+" / "+r[5]+"\n"+r[7]);
-                item.setOnClickListener(v->showIncidentDetail(r)); list.addView(item);
-                LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)item.getLayoutParams(); if(p!=null)p.setMargins(0,4,0,8);
+                LinearLayout item=new LinearLayout(this);
+                item.setOrientation(LinearLayout.VERTICAL);
+                item.setPadding(14,12,14,12);
+                item.setBackground(rounded(0xFFFFFFFF,17));
+                item.setElevation(1);
+                LinearLayout top=new LinearLayout(this);
+                top.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                TextView code=new TextView(this);
+                code.setText(r[0]);
+                code.setTextColor(ink);
+                code.setTextSize(14);
+                code.setTypeface(null,Typeface.BOLD);
+                top.addView(code,new LinearLayout.LayoutParams(0,-2,1));
+                TextView status=new TextView(this);
+                status.setText(r[14]);
+                status.setTextSize(12);
+                status.setTypeface(null,Typeface.BOLD);
+                status.setTextColor("已完成".equals(r[14])?0xFF16865B:
+                    ("整改中".equals(r[14])?0xFFB7791F:0xFF1769AA));
+                status.setPadding(10,5,10,5);
+                status.setBackground(rounded("已完成".equals(r[14])?0xFFDDF5E9:
+                    ("整改中".equals(r[14])?0xFFFFF0C9:0xFFE5F0FF),18));
+                top.addView(status);
+                item.addView(top);
+                TextView meta=new TextView(this);
+                meta.setText(occurred+"  ·  "+r[2]+"  ·  "+r[3]);
+                meta.setTextColor(0xFF64748B);
+                meta.setTextSize(12);
+                meta.setPadding(0,5,0,4);
+                item.addView(meta);
+                TextView summary=new TextView(this);
+                String symbol="设备损伤".equals(r[4])?"🔧":("物料混料".equals(r[4])?"📦":"✚");
+                summary.setText(symbol+"  "+r[4]+"  ·  "+r[5]+"\n"+r[7]);
+                summary.setTextColor(ink);
+                summary.setTextSize(14);
+                summary.setMaxLines(2);
+                item.addView(summary);
+                item.setOnClickListener(v->showIncidentDetail(r));
+                LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
+                lp.setMargins(0,3,0,7);
+                list.addView(item,lp);
+                shown++;
             }
-            if(rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
+            countLabel.setText("共 "+shown+" 条事故记录");
+            if(shown==0) list.addView(card("暂无匹配记录","请调整筛选条件，或登记新的事故"));
         };
-        search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+        search.addTextChangedListener(new TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int st,int count,int after){}
             public void onTextChanged(CharSequence s,int st,int before,int count){refresh.run();}
-            public void afterTextChanged(Editable e){}});
-        android.widget.AdapterView.OnItemSelectedListener filterListener=new android.widget.AdapterView.OnItemSelectedListener(){
-            public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){refresh.run();}
-            public void onNothingSelected(android.widget.AdapterView<?> parent){}
-        };
-        timeFilter.setOnItemSelectedListener(filterListener); typeFilter.setOnItemSelectedListener(filterListener); areaFilter.setOnItemSelectedListener(filterListener);
-        refresh.run(); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("记录");
+            public void afterTextChanged(Editable e){}
+        });
+        android.widget.AdapterView.OnItemSelectedListener filterListener=
+            new android.widget.AdapterView.OnItemSelectedListener(){
+                public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){refresh.run();}
+                public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            };
+        timeFilter.setOnItemSelectedListener(filterListener);
+        typeFilter.setOnItemSelectedListener(filterListener);
+        areaFilter.setOnItemSelectedListener(filterListener);
+        refresh.run();
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("记录");
     }
     private void showIncidentDetail(String[] r) {
         page("事故详情");
