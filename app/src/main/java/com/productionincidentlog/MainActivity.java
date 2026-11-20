@@ -691,21 +691,39 @@ public class MainActivity extends Activity {
         body.addView(sectionTitle("现场照片 / 视频"));
         if(attachments.isEmpty()) body.addView(card("现场附件","暂无照片或视频"));
         else {
-            android.widget.HorizontalScrollView mediaScroll=new android.widget.HorizontalScrollView(this);
-            LinearLayout mediaRow=new LinearLayout(this); mediaRow.setOrientation(LinearLayout.HORIZONTAL); mediaScroll.addView(mediaRow);
-            int thumb=(int)(104*getResources().getDisplayMetrics().density);
-            for(String[] attachment:attachments){
+            android.widget.GridLayout mediaGrid=new android.widget.GridLayout(this);
+            mediaGrid.setColumnCount(3);
+            mediaGrid.setAlignmentMode(android.widget.GridLayout.ALIGN_BOUNDS);
+            int gap=(int)(6*getResources().getDisplayMetrics().density);
+            int cell=(getResources().getDisplayMetrics().widthPixels-(int)(64*getResources().getDisplayMetrics().density))/3;
+            for(int mediaIndex=0;mediaIndex<attachments.size();mediaIndex++){
+                String[] attachment=attachments.get(mediaIndex);
+                android.view.View mediaTile;
                 if(attachment[1]!=null && attachment[1].startsWith("image/")){
-                    ImageView imageView=new ImageView(this); imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    ImageView imageView=new ImageView(this);
+                    imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                    imageView.setBackground(rounded(0xFFE5EDF6,12));
                     try{imageView.setImageURI(android.net.Uri.parse(attachment[0]));}catch(Exception ignored){}
-                    LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(imageView,mp);
                     imageView.setOnClickListener(v->showAttachments(r[0]));
+                    mediaTile=imageView;
                 } else {
-                    TextView video=new TextView(this);video.setText("▶\n视频");video.setGravity(android.view.Gravity.CENTER);video.setTextColor(blue);video.setBackground(rounded(0xFFE7F0FF,16));
-                    LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(thumb,thumb);mp.setMargins(3,3,8,8);mediaRow.addView(video,mp);video.setOnClickListener(v->showAttachments(r[0]));
+                    LinearLayout videoTile=new LinearLayout(this);
+                    videoTile.setOrientation(LinearLayout.VERTICAL);
+                    videoTile.setGravity(android.view.Gravity.CENTER);
+                    videoTile.setBackground(rounded(0xFFE7F0FF,12));
+                    TextView play=new TextView(this);play.setText("▶");play.setTextSize(28);play.setTextColor(blue);play.setGravity(android.view.Gravity.CENTER);
+                    TextView videoLabel=new TextView(this);videoLabel.setText("视频");videoLabel.setTextSize(12);videoLabel.setTextColor(ink);
+                    videoTile.addView(play);videoTile.addView(videoLabel);
+                    videoTile.setOnClickListener(v->showAttachments(r[0]));
+                    mediaTile=videoTile;
                 }
+                android.widget.GridLayout.LayoutParams tileLp=new android.widget.GridLayout.LayoutParams(
+                    android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f),
+                    android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f));
+                tileLp.width=cell;tileLp.height=cell;tileLp.setMargins(gap/2,gap/2,gap/2,gap/2);
+                mediaGrid.addView(mediaTile,tileLp);
             }
-            body.addView(mediaScroll);
+            body.addView(mediaGrid);
         }
         body.addView(button("查看全部附件（"+attachments.size()+"）",()->showAttachments(r[0])));
         body.addView(sectionTitle("事故内容"));
