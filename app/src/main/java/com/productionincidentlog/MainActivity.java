@@ -549,18 +549,45 @@ public class MainActivity extends Activity {
                 meta.setTextSize(12);
                 meta.setPadding(0,5,0,4);
                 item.addView(meta);
-                TextView summary=new TextView(this);
+                LinearLayout summaryRow=new LinearLayout(this);
+                summaryRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
                 String symbol="设备损伤".equals(r[4])?"🔧":("物料混料".equals(r[4])?"📦":"✚");
-                summary.setText(symbol+"  "+r[4]+"  ·  "+r[5]+"\n"+r[7]);
-                summary.setTextColor(ink);
-                summary.setTextSize(14);
-                summary.setMaxLines(2);
-                summary.setLineSpacing(2,1f);
-                summary.setPadding(10,9,10,9);
                 int summaryBg="设备损伤".equals(r[4])?0xFFFFF5E9:
                     ("物料混料".equals(r[4])?0xFFEAF4FF:0xFFFFEEF0);
+                int thumbSize=(int)(58*getResources().getDisplayMetrics().density);
+                ImageView thumb=new ImageView(this);
+                thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                thumb.setBackground(rounded(summaryBg,11));
+                boolean hasImage=false;
+                List<String[]> rowAttachments=db.attachments(r[0]);
+                for(String[] a:rowAttachments) {
+                    if(a[1]!=null && a[1].startsWith("image/")) {
+                        try { thumb.setImageURI(android.net.Uri.parse(a[0])); hasImage=thumb.getDrawable()!=null; }
+                        catch(Exception ignored) {}
+                        if(hasImage) break;
+                    }
+                }
+                if(hasImage) {
+                    LinearLayout.LayoutParams thumbLp=new LinearLayout.LayoutParams(thumbSize,thumbSize);
+                    thumbLp.setMargins(0,0,9,0);
+                    summaryRow.addView(thumb,thumbLp);
+                } else {
+                    TextView fallback=new TextView(this);
+                    fallback.setText(symbol); fallback.setTextSize(24);
+                    fallback.setGravity(android.view.Gravity.CENTER);
+                    fallback.setBackground(rounded(summaryBg,11));
+                    LinearLayout.LayoutParams fallbackLp=new LinearLayout.LayoutParams(thumbSize,thumbSize);
+                    fallbackLp.setMargins(0,0,9,0);
+                    summaryRow.addView(fallback,fallbackLp);
+                }
+                TextView summary=new TextView(this);
+                summary.setText(r[4]+"  ·  "+r[5]+"\\n"+r[7]);
+                summary.setTextColor(ink); summary.setTextSize(14);
+                summary.setMaxLines(3); summary.setLineSpacing(2,1f);
+                summary.setPadding(10,9,10,9);
                 summary.setBackground(rounded(summaryBg,12));
-                item.addView(summary);
+                summaryRow.addView(summary,new LinearLayout.LayoutParams(0,-2,1));
+                item.addView(summaryRow);
                 item.setOnClickListener(v->showIncidentDetail(r));
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);
                 lp.setMargins(0,3,0,7);
