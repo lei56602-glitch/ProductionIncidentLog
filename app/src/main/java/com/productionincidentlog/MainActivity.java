@@ -250,7 +250,7 @@ public class MainActivity extends Activity {
         root.addView(button("更新整改状态",()->{
             String[] states={"待整改","整改中","已完成"};
             new AlertDialog.Builder(this).setTitle("更新整改状态").setItems(states,(d,index)->{
-                db.updateStatus(r[0],states[index]); showIncidentDetail(db.incidentByCode(r[0]));
+                db.updateStatus(r[0],states[index]); showIncidentDetail(db.incidents(r[0]).get(0));
             }).show();
         }));
         root.addView(button("编辑事故档案",()->editIncident(r)));
