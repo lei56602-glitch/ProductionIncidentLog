@@ -473,7 +473,7 @@ public class MainActivity extends Activity {
         List<String[]> items=db.allAttachments();
         List<String> missing=new java.util.ArrayList<>();
         for(String[] item:items) {
-            try(android.database.Cursor ignored=null) {
+            try {
                 android.net.Uri uri=android.net.Uri.parse(item[1]);
                 try(java.io.InputStream in=getContentResolver().openInputStream(uri)) {
                     if(in==null) missing.add(item[0]);
@@ -486,7 +486,7 @@ public class MainActivity extends Activity {
                 .setPositiveButton("关闭",null).show();
         } else {
             StringBuilder message=new StringBuilder("发现 "+missing.size()+" 个无法读取的附件（共 "+items.size()+" 个）：");
-            for(String code:missing) message.append("\\n").append(code);
+            for(String code:missing) message.append("\n").append(code);
             new AlertDialog.Builder(this).setTitle("附件完整性异常")
                 .setMessage(message.toString()).setPositiveButton("关闭",null).show();
         }
