@@ -219,6 +219,20 @@ public class MainActivity extends Activity {
         hero.setElevation(4);
         android.widget.FrameLayout.LayoutParams heroLp=new android.widget.FrameLayout.LayoutParams(-1,-2);
         heroFrame.addView(hero,heroLp);
+        LinearLayout dateInfo=new LinearLayout(this);
+        dateInfo.setOrientation(LinearLayout.VERTICAL);
+        dateInfo.setGravity(android.view.Gravity.RIGHT);
+        TextView clockText=new TextView(this);
+        clockText.setText(new SimpleDateFormat("HH:mm",Locale.CHINA).format(new Date()));
+        clockText.setTextColor(0xFFFFFFFF);clockText.setTextSize(22);clockText.setTypeface(null,Typeface.BOLD);
+        TextView dateText=new TextView(this);
+        dateText.setText(new SimpleDateFormat("yyyy年MM月dd日  EEEE",Locale.CHINA).format(new Date()));
+        dateText.setTextColor(0xFFE3F1FF);dateText.setTextSize(10);
+        dateInfo.addView(clockText);dateInfo.addView(dateText);
+        android.widget.FrameLayout.LayoutParams dateLp=new android.widget.FrameLayout.LayoutParams(
+            -2,-2,android.view.Gravity.TOP|android.view.Gravity.RIGHT);
+        dateLp.setMargins(0,12,(int)(60*getResources().getDisplayMetrics().density),0);
+        heroFrame.addView(dateInfo,dateLp);
         TextView gear=new TextView(this);
         gear.setText("⚙"); gear.setTextSize(24); gear.setTextColor(0xFFFFFFFF);
         gear.setGravity(android.view.Gravity.CENTER); gear.setBackground(rounded(0x55304F78,30));
