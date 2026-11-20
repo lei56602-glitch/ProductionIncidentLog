@@ -477,6 +477,12 @@ public class MainActivity extends Activity {
         }
         zip.closeEntry();
     }
+    private void checkpointDatabase() throws java.io.IOException {
+        try(android.database.Cursor cursor=db.getWritableDatabase().rawQuery("PRAGMA wal_checkpoint(FULL)",null)) {
+            if(cursor.moveToFirst() && cursor.getInt(0)!=0)
+                throw new java.io.IOException("数据库 WAL 检查点忙碌，无法安全打包");
+        }
+    }
     private String sha256(java.io.File file) throws Exception {
         java.security.MessageDigest digest=java.security.MessageDigest.getInstance("SHA-256");
         try(java.io.InputStream in=new java.io.FileInputStream(file)) {
@@ -543,7 +549,7 @@ public class MainActivity extends Activity {
                 String newUri=copyAttachmentToPrivate(oldUri,attachment[0],attachment[2]);
                 db.updateAttachmentUri(attachment[0],attachment[1],newUri);
             }
-            db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            checkpointDatabase();
             db.close(); closed=true;
             java.io.File database=getDatabasePath("production_incidents.db");
             if(!database.isFile()) throw new java.io.IOException("数据库文件不存在，无法备份");
@@ -676,7 +682,7 @@ public class MainActivity extends Activity {
             } finally { check.close(); }
 
             if(!safety.mkdirs()) throw new java.io.IOException("无法创建恢复回滚目录");
-            db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            checkpointDatabase();
             db.close(); dbClosed=true;
             java.io.File current=getDatabasePath("production_incidents.db");
             if(!current.isFile()) throw new java.io.IOException("本机数据库不存在，无法创建恢复回滚点");
