@@ -6,6 +6,7 @@ import android.content.Intent;
 
 public class IncidentBootReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context,Intent intent) {
-        if(Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) IncidentReminderScheduler.schedule(context);
+        if(Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()) && IncidentReminderScheduler.isEnabled(context))
+            IncidentReminderScheduler.schedule(context);
     }
 }
