@@ -207,60 +207,58 @@ public class MainActivity extends Activity {
         incidentForm(draft.type,draft);
     }
     private void records() {
-        page("事故档案");
-        EditText search = new EditText(this); search.setHint("搜索编号、设备、类型或事故经过"); root.addView(search);
-        LinearLayout list = new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
-        ScrollView scroll = new ScrollView(this); scroll.addView(list);
-        Runnable refresh = () -> {
-            list.removeAllViews();
-            List<String[]> rows = db.incidents(search.getText().toString());
-            for (String[] r : rows) {
-                list.addView(card(r[0]+" · "+r[4],r[1]+"\n"+r[2]+" / "+r[3]+" / "+r[5]+"\n"+r[7]));
-                list.addView(button("查看事故详情", () -> {
-                    String detail = r[0]+"\n时间："+r[1]+"\n班组："+r[2]+"\n区域："+r[3]+"\n类型："+r[4]+"\n设备："+r[5]+"\n涉事人员："+r[6]
-                        +"\n\n事故经过："+r[7]+"\n\n事故分析："+r[8]+"\n\n事故原因："+r[9]
-                        +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n整改负责人："+r[12]+"\n整改期限："+r[13]+"\n整改状态："+r[14];
-                    StringBuilder historyText = new StringBuilder("\n\n整改状态变更记录：");
-                    List<String[]> history = db.statusHistory(r[0]);
-                    if (history.isEmpty()) historyText.append("\n暂无状态变更记录");
-                    else for (String[] event : history) historyText.append("\n").append(event[2]).append("  ").append(event[0]).append(" → ").append(event[1]);
-                    detail += historyText.toString();
-                    TextView detailView = new TextView(this); detailView.setText(detail); detailView.setTextSize(16); detailView.setPadding(24,20,24,20);
-                    ScrollView sv = new ScrollView(this); sv.addView(detailView);
-                    List<String[]> attachments = db.attachments(r[0]);
-                    new AlertDialog.Builder(this).setTitle(r[0]).setView(sv)
-                        .setPositiveButton("关闭",null)
-                        .setNegativeButton("查看附件（"+attachments.size()+"）",(dialog,which) -> showAttachments(r[0]))
-                        .setNeutralButton("更新整改状态",(dialog,which) -> {
-                            String[] states={"待整改","整改中","已完成"};
-                            new AlertDialog.Builder(this).setTitle("选择整改状态")
-                                .setItems(states,(d2,index) -> {
-                                    db.updateStatus(r[0],states[index]);
-                                    Toast.makeText(this,"整改状态已更新",Toast.LENGTH_SHORT).show();
-                                    records();
-                                }).show();
-                        }).show();
-                }));
-                list.addView(button("编辑事故档案", () -> editIncident(r)));
-                list.addView(button("删除事故档案", () -> new AlertDialog.Builder(this)
-                    .setTitle("确认删除事故")
-                    .setMessage("删除后将同时删除该事故关联的照片和视频附件，且无法恢复。\n\n事故编号："+r[0])
-                    .setNegativeButton("取消",null)
-                    .setPositiveButton("确认删除",(dialog,which) -> {
-                        removeIncidentAttachmentFiles(r[0]);
-                        db.deleteIncident(r[0]);
-                        Toast.makeText(this,"事故档案及本机附件文件已删除",Toast.LENGTH_SHORT).show();
-                        records();
-                    }).show()));
+        page("事故记录");
+        EditText search=new EditText(this); search.setSingleLine(true); search.setHint("⌕ 搜索编号、设备、类型或事故经过");
+        search.setTextSize(15); search.setPadding(14,8,14,8); search.setBackground(rounded(0xFFFFFFFF,18)); root.addView(search);
+        LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL);
+        ScrollView scroll=new ScrollView(this); scroll.addView(list);
+        Runnable refresh=()->{
+            list.removeAllViews(); List<String[]> rows=db.incidents(search.getText().toString());
+            for(String[] r:rows){
+                TextView item=card(r[0]+"   ·   "+r[14],r[1]+"  ·  "+r[2]+"班  ·  "+r[3]+"\n"+r[4]+" / "+r[5]+"\n"+r[7]);
+                item.setOnClickListener(v->showIncidentDetail(r)); list.addView(item);
+                LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)item.getLayoutParams(); if(p!=null)p.setMargins(0,4,0,8);
             }
-            if (rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
+            if(rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
         };
-        search.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence s,int st,int c,int a) {}
-            public void onTextChanged(CharSequence s,int st,int before,int count) { refresh.run(); }
-            public void afterTextChanged(Editable e) {}
-        });
-        refresh.run(); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}
+            public void onTextChanged(CharSequence s,int st,int before,int count){refresh.run();}
+            public void afterTextChanged(Editable e){}});
+        refresh.run(); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("记录");
+    }
+    private void showIncidentDetail(String[] r) {
+        page("事故详情");
+        ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
+        TextView code=sectionTitle(r[0]); body.addView(code);
+        body.addView(card("整改状态",r[14]));
+        body.addView(card("发生时间 / 班组 / 区域",r[1]+"\n"+r[2]+" · "+r[3]));
+        body.addView(card("事故类型 / 设备",r[4]+"\n"+r[5]));
+        body.addView(card("涉事人员",r[6]));
+        List<String[]> attachments=db.attachments(r[0]);
+        body.addView(button("现场照片 / 视频（"+attachments.size()+"）",()->showAttachments(r[0])));
+        body.addView(sectionTitle("事故内容"));
+        body.addView(card("事故经过",r[7])); body.addView(card("事故分析",r[8])); body.addView(card("事故原因",r[9]));
+        body.addView(card("当下采取措施",r[10])); body.addView(card("未来如何避免",r[11]));
+        body.addView(sectionTitle("整改跟踪"));
+        body.addView(card("整改负责人",r[12])); body.addView(card("整改期限",r[13]));
+        StringBuilder history=new StringBuilder();
+        List<String[]> events=db.statusHistory(r[0]);
+        if(events.isEmpty()) history.append("暂无状态变更记录");
+        else for(String[] e:events) history.append(e[2]).append("  ").append(e[0]).append(" → ").append(e[1]).append("\n");
+        body.addView(card("整改状态变更记录",history.toString()));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(button("更新整改状态",()->{
+            String[] states={"待整改","整改中","已完成"};
+            new AlertDialog.Builder(this).setTitle("更新整改状态").setItems(states,(d,index)->{
+                db.updateStatus(r[0],states[index]); showIncidentDetail(db.incidentByCode(r[0]));
+            }).show();
+        }));
+        root.addView(button("编辑事故档案",()->editIncident(r)));
+        root.addView(button("删除事故档案",()->new AlertDialog.Builder(this).setTitle("确认删除事故")
+            .setMessage("删除后将同时删除关联的照片和视频文件，且无法恢复。\n\n"+r[0])
+            .setNegativeButton("取消",null).setPositiveButton("确认删除",(d,w)->{
+                removeIncidentAttachmentFiles(r[0]); db.deleteIncident(r[0]); Toast.makeText(this,"事故档案已删除",Toast.LENGTH_SHORT).show(); records();
+            }).show()));
         addBottomNav("记录");
     }
 
