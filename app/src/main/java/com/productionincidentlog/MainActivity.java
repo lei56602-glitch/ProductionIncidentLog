@@ -19,6 +19,8 @@ public class MainActivity extends Activity {
     private final int ink = 0xFF17324D, blue = 0xFF1769AA, bg = 0xFFF2F7FC;
     private List<android.net.Uri> pendingAttachments = new java.util.ArrayList<>();
     private static final int REQUEST_ATTACHMENTS = 4102;
+    private static final int REQUEST_BACKUP = 4103;
+    private static final int REQUEST_RESTORE = 4104;
     private TextView attachmentHint;
 
     @Override public void onCreate(Bundle state) {
@@ -71,6 +73,8 @@ public class MainActivity extends Activity {
         root.addView(button("设备档案管理", this::equipment));
         root.addView(button("统计概览", this::statistics));
         root.addView(button("事故报表中心（Excel / PDF）", this::exportCenter));
+        root.addView(button("备份全部数据（含照片 / 视频）",this::startBackup));
+        root.addView(button("从备份恢复数据",this::chooseRestore));
     }
     private EditText field(LinearLayout box, String label, String hint, String initial, int lines) {
         TextView l = new TextView(this); l.setText(label); l.setTextColor(ink); l.setPadding(2,10,2,3); box.addView(l);
@@ -127,9 +131,13 @@ public class MainActivity extends Activity {
                 people.getText().toString(),description.getText().toString(),analysis.getText().toString(),
                 cause.getText().toString(),action.getText().toString(),prevention.getText().toString(),owner.getText().toString(),dueDate.getText().toString());
             for (android.net.Uri uri : pendingAttachments) {
-                try { getContentResolver().takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (SecurityException ignored) { }
                 String mime = getContentResolver().getType(uri);
-                db.addAttachment(code, uri.toString(), mime == null ? "application/octet-stream" : mime);
+                try {
+                    String savedUri=copyAttachmentToPrivate(uri,code,mime);
+                    db.addAttachment(code,savedUri,mime==null?"application/octet-stream":mime);
+                } catch(Exception e) {
+                    Toast.makeText(this,"附件保存失败："+e.getMessage(),Toast.LENGTH_LONG).show();
+                }
             }
             Toast.makeText(this,"保存成功："+code+"，附件 "+pendingAttachments.size()+" 个",Toast.LENGTH_LONG).show(); dashboard();
         }));
@@ -397,6 +405,177 @@ public class MainActivity extends Activity {
         root.addView(button("返回首页",this::dashboard));
     }
 
+
+    private java.io.File attachmentDirectory() {
+        java.io.File dir=new java.io.File(getFilesDir(),"incident_attachments");
+        if(!dir.exists() && !dir.mkdirs()) throw new IllegalStateException("无法创建附件目录");
+        return dir;
+    }
+    private String copyAttachmentToPrivate(android.net.Uri source,String code,String mime) throws java.io.IOException {
+        String safeCode=code.replaceAll("[^A-Za-z0-9_-]","_");
+        java.io.File dir=new java.io.File(attachmentDirectory(),safeCode);
+        if(!dir.exists() && !dir.mkdirs()) throw new java.io.IOException("无法创建事故附件目录");
+        String ext=android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime);
+        if(ext==null || ext.isEmpty()) ext="bin";
+        java.io.File target=java.io.File.createTempFile("att_", "."+ext,dir);
+        try(java.io.InputStream in=getContentResolver().openInputStream(source);
+            java.io.OutputStream out=new java.io.FileOutputStream(target)) {
+            if(in==null) throw new java.io.IOException("无法读取附件");
+            byte[] buffer=new byte[8192]; int n;
+            while((n=in.read(buffer))>0) out.write(buffer,0,n);
+        } catch(Exception e) {
+            target.delete();
+            if(e instanceof java.io.IOException) throw (java.io.IOException)e;
+            throw new java.io.IOException(e);
+        }
+        return androidx.core.content.FileProvider.getUriForFile(this,getPackageName()+".fileprovider",target).toString();
+    }
+    private void startBackup() {
+        android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+        intent.setType("application/zip");
+        intent.putExtra(android.content.Intent.EXTRA_TITLE,"ProductionIncidentLog-Backup-"+
+            new SimpleDateFormat("yyyyMMdd-HHmm",Locale.US).format(new Date())+".zip");
+        startActivityForResult(intent,REQUEST_BACKUP);
+    }
+    private void chooseRestore() {
+        new AlertDialog.Builder(this).setTitle("恢复事故数据")
+            .setMessage("恢复将用备份中的数据库和照片/视频替换本机当前数据。请先备份当前数据。")
+            .setNegativeButton("取消",null).setPositiveButton("选择备份",(d,w)->{
+                android.content.Intent intent=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+                intent.setType("application/zip");
+                startActivityForResult(intent,REQUEST_RESTORE);
+            }).show();
+    }
+    private void zipFile(java.util.zip.ZipOutputStream zip,java.io.File file,String name) throws java.io.IOException {
+        if(file.isDirectory()) {
+            java.io.File[] children=file.listFiles();
+            if(children!=null) for(java.io.File child:children)
+                zipFile(zip,child,name+child.getName()+(child.isDirectory()?"/":""));
+            return;
+        }
+        zip.putNextEntry(new java.util.zip.ZipEntry(name));
+        try(java.io.InputStream in=new java.io.FileInputStream(file)) {
+            byte[] buffer=new byte[8192]; int n;
+            while((n=in.read(buffer))>0) zip.write(buffer,0,n);
+        }
+        zip.closeEntry();
+    }
+    private void exportBackup(android.net.Uri destination) {
+        try {
+            String ownAuthority=getPackageName()+".fileprovider";
+            for(String[] attachment:db.allAttachments()) {
+                android.net.Uri old=android.net.Uri.parse(attachment[1]);
+                if(ownAuthority.equals(old.getAuthority())) continue;
+                String newUri=copyAttachmentToPrivate(old,attachment[0],attachment[2]);
+                db.updateAttachmentUri(attachment[0],attachment[1],newUri);
+            }
+            db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+            db.close();
+            java.io.OutputStream raw=getContentResolver().openOutputStream(destination);
+            if(raw==null) throw new java.io.IOException("无法创建目标备份文件");
+            try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(raw)) {
+                zipFile(zip,getDatabasePath("production_incidents.db"),"production_incidents.db");
+                java.io.File[] dirs=attachmentDirectory().listFiles();
+                if(dirs!=null) for(java.io.File dir:dirs)
+                    zipFile(zip,dir,"attachments/"+dir.getName()+(dir.isDirectory()?"/":""));
+            }
+            db=new IncidentDb(this);
+            Toast.makeText(this,"备份完成：事故档案、整改历史及照片/视频已打包",Toast.LENGTH_LONG).show();
+        } catch(Exception e) {
+            db=new IncidentDb(this);
+            Toast.makeText(this,"备份失败："+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+    private void deleteTree(java.io.File file) {
+        if(file.isDirectory()) {
+            java.io.File[] children=file.listFiles();
+            if(children!=null) for(java.io.File child:children) deleteTree(child);
+        }
+        file.delete();
+    }
+    private void copyFile(java.io.File source,java.io.File target) throws java.io.IOException {
+        java.io.File parent=target.getParentFile();
+        if(parent!=null && !parent.exists() && !parent.mkdirs()) throw new java.io.IOException("无法创建恢复目录");
+        try(java.io.InputStream in=new java.io.FileInputStream(source);
+            java.io.OutputStream out=new java.io.FileOutputStream(target)) {
+            byte[] buffer=new byte[8192]; int n;
+            while((n=in.read(buffer))>0) out.write(buffer,0,n);
+        }
+    }
+    private void copyTree(java.io.File source,java.io.File target) throws java.io.IOException {
+        if(source.isDirectory()) {
+            if(!target.exists() && !target.mkdirs()) throw new java.io.IOException("无法创建附件目录");
+            java.io.File[] children=source.listFiles();
+            if(children!=null) for(java.io.File child:children) copyTree(child,new java.io.File(target,child.getName()));
+        } else copyFile(source,target);
+    }
+    private void restoreBackup(android.net.Uri source) {
+        java.io.File temp=new java.io.File(getCacheDir(),"incident_restore");
+        deleteTree(temp); temp.mkdirs();
+        try {
+            android.net.Uri uri=source;
+            try(java.io.InputStream raw=getContentResolver().openInputStream(uri)) {
+                if(raw==null) throw new java.io.IOException("无法读取备份文件");
+                try(java.util.zip.ZipInputStream zip=new java.util.zip.ZipInputStream(raw)) {
+                    java.util.zip.ZipEntry entry; int count=0; long total=0;
+                    while((entry=zip.getNextEntry())!=null) {
+                        if(++count>5000) throw new java.io.IOException("备份文件条目过多");
+                        String name=entry.getName();
+                        if(name.startsWith("/") || name.contains("..") || name.contains("\\") ||
+                            !(name.equals("production_incidents.db") || name.startsWith("attachments/")))
+                            throw new java.io.IOException("备份文件路径不合法");
+                        java.io.File out=new java.io.File(temp,name);
+                        if(!out.getCanonicalPath().startsWith(temp.getCanonicalPath()+java.io.File.separator))
+                            throw new java.io.IOException("备份文件路径越界");
+                        if(entry.isDirectory()) out.mkdirs();
+                        else {
+                            java.io.File parent=out.getParentFile();
+                            if(parent!=null) parent.mkdirs();
+                            try(java.io.OutputStream stream=new java.io.FileOutputStream(out)) {
+                                byte[] buffer=new byte[8192]; int n;
+                                while((n=zip.read(buffer))>0) {
+                                    total+=n;
+                                    if(total>536870912L) throw new java.io.IOException("备份解压内容超过 512 MB");
+                                    stream.write(buffer,0,n);
+                                }
+                            }
+                        }
+                        zip.closeEntry();
+                    }
+                }
+            }
+            java.io.File restoredDb=new java.io.File(temp,"production_incidents.db");
+            if(!restoredDb.isFile()) throw new java.io.IOException("备份中没有数据库文件");
+            android.database.sqlite.SQLiteDatabase check=android.database.sqlite.SQLiteDatabase.openDatabase(
+                restoredDb.getAbsolutePath(),null,android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+            try(android.database.Cursor cursor=check.rawQuery("PRAGMA integrity_check",null)) {
+                if(!cursor.moveToFirst() || !"ok".equalsIgnoreCase(cursor.getString(0)))
+                    throw new java.io.IOException("数据库完整性检查未通过");
+            } finally { check.close(); }
+            db.close();
+            java.io.File current=getDatabasePath("production_incidents.db");
+            new java.io.File(current.getPath()+"-wal").delete();
+            new java.io.File(current.getPath()+"-shm").delete();
+            current.delete();
+            copyFile(restoredDb,current);
+            java.io.File attachmentRoot=attachmentDirectory();
+            deleteTree(attachmentRoot); attachmentRoot.mkdirs();
+            java.io.File restoredAttachments=new java.io.File(temp,"attachments");
+            if(restoredAttachments.exists()) copyTree(restoredAttachments,attachmentRoot);
+            db=new IncidentDb(this);
+            db.getReadableDatabase();
+            deleteTree(temp);
+            Toast.makeText(this,"恢复完成：数据库完整性检查通过，事故档案和附件已恢复",Toast.LENGTH_LONG).show();
+            dashboard();
+        } catch(Exception e) {
+            if(db==null) db=new IncidentDb(this);
+            deleteTree(temp);
+            Toast.makeText(this,"恢复失败："+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+
     private void showAttachments(String code) {
         List<String[]> items = db.attachments(code);
         if (items.isEmpty()) { new AlertDialog.Builder(this).setMessage("该事故没有现场照片或视频附件。").setPositiveButton("关闭",null).show(); return; }
@@ -409,7 +588,16 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode!=REQUEST_ATTACHMENTS || resultCode!=RESULT_OK || data==null) return;
+        if(resultCode!=RESULT_OK || data==null) return;
+        if(requestCode==REQUEST_BACKUP) { exportBackup(data.getData()); return; }
+        if(requestCode==REQUEST_RESTORE) {
+            new AlertDialog.Builder(this).setTitle("确认覆盖本机数据")
+                .setMessage("将覆盖本机现有事故档案和附件，恢复前请确认已备份当前数据。")
+                .setNegativeButton("取消",null)
+                .setPositiveButton("确认恢复",(d,w)->restoreBackup(data.getData())).show();
+            return;
+        }
+        if(requestCode!=REQUEST_ATTACHMENTS) return;
         if(data.getClipData()!=null) { android.content.ClipData clip=data.getClipData(); for(int i=0;i<clip.getItemCount();i++) addPendingAttachment(clip.getItemAt(i).getUri()); }
         else if(data.getData()!=null) addPendingAttachment(data.getData());
         if (attachmentHint != null) attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个附件");
