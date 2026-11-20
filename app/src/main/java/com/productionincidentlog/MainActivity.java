@@ -308,10 +308,12 @@ public class MainActivity extends Activity {
         TextView typeLabel=sectionTitle("事故类型");
         form.addView(typeLabel);
         LinearLayout typeRow=new LinearLayout(this); typeRow.setOrientation(LinearLayout.HORIZONTAL);
-        String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
+        String[] types={"设备损伤","物料混料","人员受伤"};
+        String[] typeIcons={"🔧","📦","✚"};
+        int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
         final int[] selectedType={presetType==null?0:Math.max(0,java.util.Arrays.asList(types).indexOf(presetType))};
         TextView[] typeTiles=new TextView[3];
-        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(types[i]+"\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
+        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(typeIcons[i]+"\n"+types[i]+"\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
             typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15);
             android.graphics.drawable.GradientDrawable tileBg=rounded(colors[i],16);
             tileBg.setStroke(i==selectedType[0]?3:1,i==selectedType[0]?blue:0xFFDCE5F0);
@@ -321,6 +323,7 @@ public class MainActivity extends Activity {
             typeTiles[i].setAlpha(i==selectedType[0]?1f:0.55f);
         }
         form.addView(typeRow);
+        form.addView(sectionTitle("基本信息"));
         String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
         EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",draft.date==null?now:draft.date,1);
         Spinner team=spinner(form,"班组 *",java.util.Arrays.asList("A班","B班"));
@@ -331,12 +334,12 @@ public class MainActivity extends Activity {
         Spinner equipment=spinner(form,"设备名称",equipmentNames);
         if(draft.equipment!=null && equipmentNames.contains(draft.equipment)) equipment.setSelection(equipmentNames.indexOf(draft.equipment));
         EditText people=field(form,"涉事人员","人员姓名或工号",draft.people==null?"":draft.people,1);
-        attachmentHint=new TextView(this); attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        attachmentHint=new TextView(this); attachmentHint.setText("📷 现场照片 / 视频    已选择 "+pendingAttachments.size()+" 个"); attachmentHint.setTextColor(ink); attachmentHint.setTextSize(14); attachmentHint.setTypeface(null,Typeface.BOLD); attachmentHint.setPadding(4,10,4,5); form.addView(attachmentHint);
         attachmentPreview=new LinearLayout(this); attachmentPreview.setOrientation(LinearLayout.HORIZONTAL);
         android.widget.HorizontalScrollView previewScroll=new android.widget.HorizontalScrollView(this);
         previewScroll.setHorizontalScrollBarEnabled(false); previewScroll.addView(attachmentPreview); form.addView(previewScroll);
         refreshAttachmentPreview();
-        form.addView(button("＋ 添加现场照片 / 视频",()->{
+        form.addView(button("＋  添加现场照片 / 视频",()->{
             android.content.Intent pick=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
             pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
             pick.putExtra(android.content.Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
