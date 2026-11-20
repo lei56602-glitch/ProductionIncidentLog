@@ -308,6 +308,9 @@ public class MainActivity extends Activity {
         e.setPadding(14,10,14,10); e.setBackground(rounded(0xFFFFFFFF,15)); e.setElevation(1);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,5); box.addView(e,p); return e;
     }
+    private List<String> catalogFilter(String category,String allLabel) {
+        List<String> values=new java.util.ArrayList<>();values.add(allLabel);values.addAll(db.catalogNames(category));return values;
+    }
     private Spinner spinner(LinearLayout box, String label, List<String> values) {
         if(label!=null && !label.isEmpty()){TextView l=new TextView(this);l.setText(label);l.setTextColor(ink);l.setTypeface(null,Typeface.BOLD);l.setTextSize(14);l.setPadding(2,12,2,5);box.addView(l);}
         Spinner s=new Spinner(this); s.setPadding(8,5,8,5); s.setBackground(rounded(0xFFFFFFFF,14));
@@ -347,9 +350,9 @@ public class MainActivity extends Activity {
         form.addView(sectionTitle("基本信息"));
         String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
         EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",draft.date==null?now:draft.date,1);
-        Spinner team=spinner(form,"班组 *",java.util.Arrays.asList("A班","B班"));
+        Spinner team=spinner(form,"班组 *",db.catalogNames("team"));
         if(draft.team!=null) team.setSelection(Math.max(0,java.util.Arrays.asList("A班","B班").indexOf(draft.team)));
-        Spinner area=spinner(form,"区域 *",java.util.Arrays.asList("造粒","仓库"));
+        Spinner area=spinner(form,"区域 *",db.catalogNames("area"));
         if(draft.area!=null) area.setSelection(Math.max(0,java.util.Arrays.asList("造粒","仓库").indexOf(draft.area)));
         List<String> equipmentNames=db.equipmentNames(); if(equipmentNames.isEmpty()) equipmentNames.add("未指定");
         Spinner equipment=spinner(form,"设备名称",equipmentNames);
@@ -464,8 +467,8 @@ public class MainActivity extends Activity {
         filters.setOrientation(LinearLayout.HORIZONTAL);
         Spinner timeFilter=spinner(filters,"",java.util.Arrays.asList("全部时间","本月","本季度","本年度"));
         Spinner typeFilter=spinner(filters,"",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
-        Spinner areaFilter=spinner(filters,"",java.util.Arrays.asList("全部区域","造粒","仓库"));
-        Spinner teamFilter=spinner(filters,"",java.util.Arrays.asList("全部班组","A班","B班"));
+        Spinner areaFilter=spinner(filters,"",catalogFilter("area","全部区域"));
+        Spinner teamFilter=spinner(filters,"",catalogFilter("team","全部班组"));
         List<String> deviceChoices=new java.util.ArrayList<>();
         deviceChoices.add("全部设备"); deviceChoices.addAll(db.equipmentNames());
         Spinner deviceFilter=spinner(filters,"",deviceChoices);
@@ -830,8 +833,44 @@ public class MainActivity extends Activity {
         item.setOnClickListener(v->action.run());
         return item;
     }
-    private void showCatalog(String title,String[] values) {
-        new AlertDialog.Builder(this).setTitle(title).setItems(values,(dialog,which)->{}).setPositiveButton("关闭",null).show();
+    private void showCatalog(String title,String category) {
+        page(title);
+        LinearLayout content=new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(12,10,12,10);
+        TextView note=new TextView(this);
+        note.setText("新增项目会立即用于事故登记和筛选。长按项目可停用；已保存的历史事故记录不会被修改。");
+        note.setTextColor(0xFF64748B);note.setTextSize(13);note.setPadding(4,4,4,10);
+        content.addView(note);
+        EditText input=field(content,"新增"+(category.equals("team")?"班组":"区域")+"名称","请输入名称","",1);
+        content.addView(button("添加到档案",()->{
+            String value=input.getText().toString().trim();
+            if(db.addCatalogValue(category,value)){Toast.makeText(this,"档案已添加",Toast.LENGTH_SHORT).show();showCatalog(title,category);}
+            else Toast.makeText(this,"名称不能为空或已存在",Toast.LENGTH_SHORT).show();
+        }));
+        content.addView(sectionTitle("现有档案（长按可停用）"));
+        List<String> values=db.catalogNames(category);
+        if(values.isEmpty())content.addView(card("暂无档案","请先添加一个项目"));
+        for(String value:values){
+            TextView item=new TextView(this);
+            item.setText(value+"    ·    长按停用");
+            item.setTextColor(ink);item.setTextSize(15);item.setPadding(14,13,12,13);
+            item.setBackground(rounded(0xFFFFFFFF,14));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,3,0,5);
+            content.addView(item,lp);
+            item.setOnLongClickListener(v->{
+                new AlertDialog.Builder(this).setTitle("停用档案")
+                    .setMessage("停用“"+value+"”？历史事故记录仍会保留。")
+                    .setNegativeButton("取消",null)
+                    .setPositiveButton("停用",(dialog,which)->{
+                        if(db.deactivateCatalogValue(category,value)){Toast.makeText(this,"已停用",Toast.LENGTH_SHORT).show();showCatalog(title,category);}
+                    }).show();
+                return true;
+            });
+        }
+        ScrollView scroll=new ScrollView(this);scroll.addView(content);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("我的");
     }
     private LinearLayout settingsGroup(LinearLayout body,String title,String subtitle) {
         LinearLayout group=new LinearLayout(this);
@@ -884,8 +923,8 @@ public class MainActivity extends Activity {
         body.addView(intro);
         LinearLayout catalogs=settingsGroup(body,"基础资料管理","维护现场统一选项，减少重复名称");
         catalogs.addView(settingItem("设备管理",this::equipment));
-        catalogs.addView(settingItem("班组管理",()->showCatalog("班组管理",new String[]{"A班","B班"})));
-        catalogs.addView(settingItem("区域管理",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
+        catalogs.addView(settingItem("班组管理",()->showCatalog("班组管理","team")));
+        catalogs.addView(settingItem("区域管理",()->showCatalog("区域管理","area")));
         LinearLayout safety=settingsGroup(body,"数据安全","备份文件包含事故数据库及照片、视频附件");
         safety.addView(settingItem("数据备份",this::startBackup));
         safety.addView(settingItem("从备份恢复数据",this::chooseRestore));
