@@ -15,22 +15,37 @@ public class IncidentExporter {
             .replace("\"","&quot;").replace("'","&apos;");
     }
     private static String cell(String value) {
-        return "<Cell><Data ss:Type=\"String\">"+esc(value)+"</Data></Cell>";
+        return "<Cell ss:StyleID=\"Body\"><Data ss:Type=\"String\">"+esc(value)+"</Data></Cell>";
+    }
+    private static String headerCell(String value) {
+        return "<Cell ss:StyleID=\"Header\"><Data ss:Type=\"String\">"+esc(value)+"</Data></Cell>";
     }
     private static String row(String... values) {
-        StringBuilder b=new StringBuilder("<Row>");
+        StringBuilder b=new StringBuilder("<Row ss:AutoFitHeight=\"1\">");
         for(String v:values) b.append(cell(v));
         return b.append("</Row>").toString();
+    }
+    private static String headerRow(String... values) {
+        StringBuilder b=new StringBuilder("<Row ss:AutoFitHeight=\"1\">");
+        for(String v:values) b.append(headerCell(v));
+        return b.append("</Row>").toString();
+    }
+    private static String styles() {
+        return "<Styles>"+
+            "<Style ss:ID=\"Default\" ss:Name=\"Normal\"><Alignment ss:Vertical=\"Center\"/><Borders/><Font ss:FontName=\"等线\" ss:Size=\"10\"/><Interior/><NumberFormat/><Protection/></Style>"+
+            "<Style ss:ID=\"Header\"><Alignment ss:Vertical=\"Center\" ss:WrapText=\"1\"/><Font ss:FontName=\"等线\" ss:Size=\"10\" ss:Bold=\"1\" ss:Color=\"#FFFFFF\"/><Interior ss:Color=\"#1556A8\" ss:Pattern=\"Solid\"/><Borders><Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\" ss:Color=\"#FFFFFF\"/></Borders></Style>"+
+            "<Style ss:ID=\"Body\"><Alignment ss:Vertical=\"Top\" ss:WrapText=\"1\"/><Font ss:FontName=\"等线\" ss:Size=\"10\"/><Borders><Border ss:Position=\"Bottom\" ss:LineStyle=\"Continuous\" ss:Weight=\"1\" ss:Color=\"#E2E8F0\"/></Borders></Style>"+
+            "</Styles>";
     }
     private static String sheet(String name,String content) {
         return "<Worksheet ss:Name=\""+esc(name)+"\"><Table>"+content+"</Table></Worksheet>";
     }
     public static File writeExcel(Context context,List<String[]> rows,String from,String to) throws Exception {
         StringBuilder summary=new StringBuilder();
-        summary.append(row("事故编号","发生时间","班组","区域","事故类型","设备名称","整改负责人","整改期限","整改状态"));
+        summary.append(headerRow("事故编号","发生时间","班组","区域","事故类型","设备名称","整改负责人","整改期限","整改状态"));
         for(String[] r:rows) summary.append(row(r[0],r[1],r[2],r[3],r[4],r[5],r[12],r[13],r[14]));
         StringBuilder details=new StringBuilder();
-        details.append(row("事故编号","发生时间","班组","区域","事故类型","设备名称","涉事人员","事故经过","事故分析","事故原因","当下采取措施","未来如何避免","整改负责人","整改期限","整改状态"));
+        details.append(headerRow("事故编号","发生时间","班组","区域","事故类型","设备名称","涉事人员","事故经过","事故分析","事故原因","当下采取措施","未来如何避免","整改负责人","整改期限","整改状态"));
         for(String[] r:rows) details.append(row(r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12],r[13],r[14]));
         Map<String,Integer> types=new TreeMap<>(), teams=new TreeMap<>(), areas=new TreeMap<>(), equipment=new TreeMap<>();
         for(String[] r:rows) {
@@ -40,14 +55,14 @@ public class IncidentExporter {
             equipment.put(r[5],equipment.containsKey(r[5])?equipment.get(r[5])+1:1);
         }
         StringBuilder stats=new StringBuilder();
-        stats.append(row("统计项目","分类","事故数量"));
+        stats.append(headerRow("统计项目","分类","事故数量"));
         stats.append(row("事故总数","全部",String.valueOf(rows.size())));
         appendStats(stats,"事故类型",types); appendStats(stats,"班组",teams);
         appendStats(stats,"区域",areas); appendStats(stats,"设备",equipment);
         String xml="<?xml version=\"1.0\" encoding=\"UTF-8\"?><?mso-application progid=\"Excel.Sheet\"?>"+
             "<Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" "+
             "xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">"+
-            sheet("事故汇总表",summary.toString())+sheet("事故详细记录",details.toString())+
+            styles()+sheet("事故汇总表",summary.toString())+sheet("事故详细记录",details.toString())+
             sheet("事故统计表",stats.toString())+"</Workbook>";
         File dir=new File(context.getCacheDir(),"exports"); if(!dir.exists()) dir.mkdirs();
         String stamp=new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date());
