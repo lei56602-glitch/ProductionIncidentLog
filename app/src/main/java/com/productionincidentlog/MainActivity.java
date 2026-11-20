@@ -131,6 +131,11 @@ public class MainActivity extends Activity {
                     String detail = r[0]+"\n时间："+r[1]+"\n班组："+r[2]+"\n区域："+r[3]+"\n类型："+r[4]+"\n设备："+r[5]+"\n涉事人员："+r[6]
                         +"\n\n事故经过："+r[7]+"\n\n事故分析："+r[8]+"\n\n事故原因："+r[9]
                         +"\n\n当下措施："+r[10]+"\n\n未来避免："+r[11]+"\n\n整改负责人："+r[12]+"\n整改期限："+r[13]+"\n整改状态："+r[14];
+                    StringBuilder historyText = new StringBuilder("\\n\\n整改状态变更记录：");
+                    List<String[]> history = db.statusHistory(r[0]);
+                    if (history.isEmpty()) historyText.append("\\n暂无状态变更记录");
+                    else for (String[] event : history) historyText.append("\\n").append(event[2]).append("  ").append(event[0]).append(" → ").append(event[1]);
+                    detail += historyText.toString();
                     TextView detailView = new TextView(this); detailView.setText(detail); detailView.setTextSize(16); detailView.setPadding(24,20,24,20);
                     ScrollView sv = new ScrollView(this); sv.addView(detailView);
                     List<String[]> attachments = db.attachments(r[0]);
