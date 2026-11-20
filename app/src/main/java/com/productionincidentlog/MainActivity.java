@@ -104,64 +104,95 @@ public class MainActivity extends Activity {
         Spinner s = new Spinner(this);
         s.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values)); box.addView(s); return s;
     }
+    private static class IncidentDraft {
+        String date,team,area,type,equipment,people;
+        List<android.net.Uri> attachments=new java.util.ArrayList<>();
+    }
     private void incidentForm() { incidentForm(null); }
     private void incidentForm(String presetType) {
-        pendingAttachments = new java.util.ArrayList<>();
-        page("登记生产事故");
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
-        String now = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
-        EditText date = field(form,"发生日期与时间","例如：2026-11-20 14:30",now,1);
-        Spinner team = spinner(form,"班组",java.util.Arrays.asList("A班","B班"));
-        Spinner area = spinner(form,"发生区域",java.util.Arrays.asList("造粒","仓库"));
-        Spinner type = spinner(form,"事故类型",java.util.Arrays.asList("设备损伤","物料混料","人员受伤"));
-        if(presetType!=null) type.setSelection(Math.max(0,java.util.Arrays.asList("设备损伤","物料混料","人员受伤").indexOf(presetType)));
-        List<String> equipmentNames = db.equipmentNames();
-        if (equipmentNames.isEmpty()) equipmentNames.add("未指定");
-        Spinner equipment = spinner(form,"设备名称（从设备档案选择）",equipmentNames);
-        EditText people = field(form,"涉事人员","人员姓名或工号；注意保护伤者隐私","",1);
-        EditText description = field(form,"一、事故经过","客观描述事故发生过程","",3);
-        EditText analysis = field(form,"二、事故分析","分析事故过程及影响","",3);
-        EditText cause = field(form,"三、事故原因","填写直接原因和根本原因","",3);
-        EditText action = field(form,"四、当下采取措施","现场处置和临时控制措施","",3);
-        EditText prevention = field(form,"五、未来如何避免","长期整改和预防措施","",3);
-        EditText owner = field(form,"整改负责人","负责推动整改的人","",1);
-        EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
-        attachmentHint = new TextView(this); attachmentHint.setText("现场照片 / 视频：尚未选择"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
-        form.addView(button("选择现场照片或视频（可多选）", () -> {
-            android.content.Intent pick = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+        pendingAttachments=new java.util.ArrayList<>();
+        IncidentDraft draft=new IncidentDraft();
+        page("新增事故记录 · 基本信息");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
+        TextView step=new TextView(this); step.setText("● 1 基本信息     ━━━━━     ○ 2 详细内容     ○ 3 完成");
+        step.setTextColor(blue); step.setTextSize(14); step.setTypeface(null,Typeface.BOLD); step.setPadding(4,12,4,18); form.addView(step);
+        TextView typeLabel=sectionTitle("事故类型");
+        form.addView(typeLabel);
+        LinearLayout typeRow=new LinearLayout(this); typeRow.setOrientation(LinearLayout.HORIZONTAL);
+        String[] types={"设备损伤","物料混料","人员受伤"}; int[] colors={0xFFFFF0DF,0xFFE8F2FF,0xFFFFEDEF};
+        final int[] selectedType={presetType==null?0:Math.max(0,java.util.Arrays.asList(types).indexOf(presetType))};
+        TextView[] typeTiles=new TextView[3];
+        for(int i=0;i<types.length;i++){ final int index=i; typeTiles[i]=new TextView(this); typeTiles[i].setText(types[i]+"\\n记录"); typeTiles[i].setGravity(android.view.Gravity.CENTER);
+            typeTiles[i].setTextColor(ink); typeTiles[i].setTextSize(14); typeTiles[i].setPadding(5,15,5,15); typeTiles[i].setBackground(rounded(colors[i],16));
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,-2,1); p.setMargins(3,3,3,3); typeRow.addView(typeTiles[i],p);
+            typeTiles[i].setOnClickListener(v->{selectedType[0]=index; for(int j=0;j<3;j++) typeTiles[j].setAlpha(j==index?1f:0.55f);});
+            typeTiles[i].setAlpha(i==selectedType[0]?1f:0.55f);
+        }
+        form.addView(typeRow);
+        String now=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.getDefault()).format(new Date());
+        EditText date=field(form,"发生时间 *","yyyy-MM-dd HH:mm",now,1);
+        Spinner team=spinner(form,"班组 *",java.util.Arrays.asList("A班","B班"));
+        Spinner area=spinner(form,"区域 *",java.util.Arrays.asList("造粒","仓库"));
+        List<String> equipmentNames=db.equipmentNames(); if(equipmentNames.isEmpty()) equipmentNames.add("未指定");
+        Spinner equipment=spinner(form,"设备名称",equipmentNames);
+        EditText people=field(form,"涉事人员","人员姓名或工号","",1);
+        attachmentHint=new TextView(this); attachmentHint.setText("现场照片 / 视频：尚未选择"); attachmentHint.setTextColor(ink); form.addView(attachmentHint);
+        form.addView(button("＋ 添加现场照片 / 视频",()->{
+            android.content.Intent pick=new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
             pick.addCategory(android.content.Intent.CATEGORY_OPENABLE); pick.setType("*/*");
-            pick.putExtra(android.content.Intent.EXTRA_MIME_TYPES, new String[]{"image/*","video/*"});
-            pick.putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true);
-            pick.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-            startActivityForResult(pick, REQUEST_ATTACHMENTS);
+            pick.putExtra(android.content.Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*"});
+            pick.putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE,true);
+            pick.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION|android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(pick,REQUEST_ATTACHMENTS);
         }));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        root.addView(button("保存事故档案", () -> {
-            if (date.getText().toString().trim().isEmpty() || description.getText().toString().trim().isEmpty()
-                || analysis.getText().toString().trim().isEmpty() || cause.getText().toString().trim().isEmpty()
-                || action.getText().toString().trim().isEmpty() || prevention.getText().toString().trim().isEmpty()) {
-                Toast.makeText(this,"请填写发生时间及五项事故内容",Toast.LENGTH_LONG).show(); return;
-            }
-            if(!validDueDate(dueDate.getText().toString())) {
-                Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show(); return;
-            }
-            String code = db.addIncident(date.getText().toString(),team.getSelectedItem().toString(),
-                area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),
-                people.getText().toString(),description.getText().toString(),analysis.getText().toString(),
-                cause.getText().toString(),action.getText().toString(),prevention.getText().toString(),owner.getText().toString(),dueDate.getText().toString());
-            for (android.net.Uri uri : pendingAttachments) {
-                String mime = getContentResolver().getType(uri);
-                try {
-                    String savedUri=copyAttachmentToPrivate(uri,code,mime);
-                    db.addAttachment(code,savedUri,mime==null?"application/octet-stream":mime);
-                } catch(Exception e) {
-                    Toast.makeText(this,"附件保存失败："+e.getMessage(),Toast.LENGTH_LONG).show();
-                }
-            }
-            Toast.makeText(this,"保存成功："+code+"，附件 "+pendingAttachments.size()+" 个",Toast.LENGTH_LONG).show(); dashboard();
+        root.addView(button("下一步：事故分析",()->{
+            if(date.getText().toString().trim().isEmpty()){Toast.makeText(this,"请填写发生时间",Toast.LENGTH_SHORT).show();return;}
+            draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
+            draft.type=types[selectedType[0]]; draft.equipment=equipment.getSelectedItem().toString(); draft.people=people.getText().toString().trim();
+            draft.attachments=new java.util.ArrayList<>(pendingAttachments); incidentAnalysis(draft);
         }));
-        root.addView(button("返回首页",this::dashboard));
+    }
+    private void incidentAnalysis(IncidentDraft draft) {
+        page("新增事故记录 · 详细内容");
+        ScrollView scroll=new ScrollView(this); LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
+        TextView step=new TextView(this); step.setText("✓ 1 基本信息     ━━━━━     ● 2 详细内容     ○ 3 完成");
+        step.setTextColor(blue); step.setTextSize(14); step.setTypeface(null,Typeface.BOLD); step.setPadding(4,12,4,18); form.addView(step);
+        TextView heading=sectionTitle("事故分析"); form.addView(heading);
+        EditText description=field(form,"事故经过 *","请描述事故发生过程（不少于 50 字）","",4);
+        EditText analysis=field(form,"事故分析 *","分析事故过程、存在的问题及影响","",4);
+        EditText cause=field(form,"事故原因 *","包括直接原因、间接原因等","",4);
+        EditText action=field(form,"当下采取措施 *","事故发生后采取了哪些措施","",3);
+        EditText prevention=field(form,"未来如何避免 *","预防措施和改进方案","",3);
+        EditText owner=field(form,"整改负责人","负责推动整改的人","",1);
+        EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30","",1);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(button("下一步：确认提交",()->{
+            if(description.getText().toString().trim().isEmpty()||analysis.getText().toString().trim().isEmpty()
+                ||cause.getText().toString().trim().isEmpty()||action.getText().toString().trim().isEmpty()
+                ||prevention.getText().toString().trim().isEmpty()){
+                Toast.makeText(this,"请填写五项事故分析内容",Toast.LENGTH_LONG).show();return;
+            }
+            if(!validDueDate(dueDate.getText().toString())){Toast.makeText(this,"整改期限格式错误，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_LONG).show();return;}
+            new AlertDialog.Builder(this).setTitle("确认提交事故")
+                .setMessage("类型："+draft.type+"\\n时间："+draft.date+"\\n班组："+draft.team+" · "+draft.area+"\\n设备："+draft.equipment+"\\n附件："+draft.attachments.size()+" 个")
+                .setNegativeButton("继续修改",null).setPositiveButton("确认提交",(dialog,which)->{
+                    String code=db.addIncident(draft.date,draft.team,draft.area,draft.type,draft.equipment,draft.people,
+                        description.getText().toString().trim(),analysis.getText().toString().trim(),cause.getText().toString().trim(),
+                        action.getText().toString().trim(),prevention.getText().toString().trim(),owner.getText().toString().trim(),dueDate.getText().toString().trim());
+                    int saved=0;
+                    for(android.net.Uri uri:draft.attachments){String mime=getContentResolver().getType(uri);try{
+                        String savedUri=copyAttachmentToPrivate(uri,code,mime); db.addAttachment(code,savedUri,mime==null?"application/octet-stream":mime); saved++;
+                    }catch(Exception e){Toast.makeText(this,"附件保存失败："+e.getMessage(),Toast.LENGTH_LONG).show();}}
+                    Toast.makeText(this,"事故档案保存成功："+code+"，附件 "+saved+" 个",Toast.LENGTH_LONG).show(); dashboard();
+                }).show();
+        }));
+        root.addView(button("返回：修改基本信息",()->incidentFormWithDraft(draft)));
+    }
+    private void incidentFormWithDraft(IncidentDraft draft) {
+        pendingAttachments=new java.util.ArrayList<>(draft.attachments);
+        incidentForm(draft.type);
     }
     private void records() {
         page("事故档案");
