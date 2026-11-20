@@ -267,12 +267,20 @@ public class MainActivity extends Activity {
         root.addView(button("取消返回档案",this::records));
     }
 
+    private void showCatalog(String title,String[] values) {
+        new AlertDialog.Builder(this).setTitle(title).setItems(values,(dialog,which)->{}).setPositiveButton("关闭",null).show();
+    }
     private void settingsCenter() {
         page("设置中心"); ScrollView scroll=new ScrollView(this); LinearLayout body=new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL); scroll.addView(body);
-        body.addView(button("设备管理",this::equipment)); body.addView(button("数据备份（含照片 / 视频）",this::startBackup));
+        body.addView(button("设备管理  ›",this::equipment));
+        body.addView(button("班组管理  ›",()->showCatalog("班组管理",new String[]{"A班","B班"})));
+        body.addView(button("区域管理  ›",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
+        body.addView(button("数据备份（含照片 / 视频）  ›",this::startBackup));
         body.addView(button("从备份恢复数据",this::chooseRestore)); body.addView(button("立即检查整改提醒",this::checkRemindersNow));
         body.addView(button("检查照片 / 视频附件完整性",this::checkAttachmentIntegrity));
-        body.addView(card("关于我们","生产事故管理系统 · 本地 SQLite 数据存储"));
+        body.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
+            .setMessage("版本：1.0.0\\n数据存储：本机 SQLite\\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
+            .setPositiveButton("关闭",null).show()));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1)); addBottomNav("我的");
     }
     private void equipment() {
@@ -285,7 +293,7 @@ public class MainActivity extends Activity {
         }));
         TextView heading = new TextView(this); heading.setText("现有设备"); heading.setTextColor(ink); heading.setTextSize(18); root.addView(heading);
         for (String n : db.equipmentNames()) root.addView(card("设备",n));
-        root.addView(button("返回首页",this::dashboard));
+        addBottomNav("我的");
     }
     private void statistics() {
         page("多条件事故统计");
