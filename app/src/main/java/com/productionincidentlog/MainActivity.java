@@ -48,13 +48,31 @@ public class MainActivity extends Activity {
         TextView t=new TextView(this); t.setText(value); t.setTextSize(17); t.setTextColor(ink); t.setTypeface(null,Typeface.BOLD); t.setPadding(4,16,4,8); return t;
     }
     private void page(String title) {
-        root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(14,0,14,10); root.setBackgroundColor(bg);
-        LinearLayout header=new LinearLayout(this); header.setGravity(android.view.Gravity.CENTER_VERTICAL); header.setPadding(10,14,10,14); header.setBackground(rounded(0xFF0866D8,24));
-        TextView h=new TextView(this); h.setText(title); h.setTextSize(21); h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
+        root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(12,0,12,10); root.setBackgroundColor(0xFFF1F5FB);
+        LinearLayout header=new LinearLayout(this);
+        header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        header.setPadding(8,11,12,11);
+        header.setBackground(rounded(0xFF0866D8,20));
+        if(!"生产事故管理系统".equals(title)) {
+            TextView back=new TextView(this); back.setText("‹"); back.setTextSize(34);
+            back.setTextColor(0xFFFFFFFF); back.setGravity(android.view.Gravity.CENTER);
+            back.setMinWidth(42); header.addView(back);
+            back.setOnClickListener(v->dashboard());
+        }
+        TextView h=new TextView(this); h.setText(title); h.setTextSize(19);
+        h.setTextColor(0xFFFFFFFF); h.setTypeface(null,Typeface.BOLD);
+        h.setGravity(android.view.Gravity.CENTER_VERTICAL);
         header.addView(h,new LinearLayout.LayoutParams(0,-2,1));
-        if("生产事故管理系统".equals(title)){TextView gear=new TextView(this);gear.setText("⚙");gear.setTextSize(23);gear.setTextColor(0xFFFFFFFF);gear.setPadding(12,0,4,0);header.addView(gear);gear.setOnClickListener(v->settingsCenter());}
-        root.addView(header,new LinearLayout.LayoutParams(-1,-2)); setContentView(root);
-        getWindow().setStatusBarColor(0xFF0759C5); getWindow().setNavigationBarColor(0xFFF7FAFE);
+        if("生产事故管理系统".equals(title)) {
+            TextView gear=new TextView(this); gear.setText("⚙"); gear.setTextSize(23);
+            gear.setTextColor(0xFFFFFFFF); gear.setPadding(12,0,4,0);
+            header.addView(gear); gear.setOnClickListener(v->settingsCenter());
+        }
+        root.addView(header,new LinearLayout.LayoutParams(-1,-2));
+        setContentView(root);
+        getWindow().setStatusBarColor(0xFF0759C5);
+        getWindow().setNavigationBarColor(0xFFF7FAFE);
     }
     private Button button(String text,Runnable run) {
         Button b=new Button(this); b.setText(text); b.setAllCaps(false); b.setTextColor(0xFFFFFFFF); b.setTextSize(15); b.setTypeface(null,Typeface.BOLD);
@@ -193,6 +211,7 @@ public class MainActivity extends Activity {
             startActivityForResult(pick,REQUEST_ATTACHMENTS);
         }));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("记录");
         root.addView(button("下一步：事故分析",()->{
             if(!validIncidentDate(date.getText().toString())){Toast.makeText(this,"发生时间格式错误，请使用 yyyy-MM-dd HH:mm",Toast.LENGTH_SHORT).show();return;}
             draft.date=date.getText().toString().trim(); draft.team=team.getSelectedItem().toString(); draft.area=area.getSelectedItem().toString();
@@ -214,6 +233,7 @@ public class MainActivity extends Activity {
         EditText owner=field(form,"整改负责人","负责推动整改的人",draft.owner==null?"":draft.owner,1);
         EditText dueDate=field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",draft.dueDate==null?"":draft.dueDate,1);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addBottomNav("记录");
         root.addView(button("下一步：确认提交",()->{
             if(description.getText().toString().trim().isEmpty()||analysis.getText().toString().trim().isEmpty()
                 ||cause.getText().toString().trim().isEmpty()||action.getText().toString().trim().isEmpty()
