@@ -27,7 +27,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state); db = new IncidentDb(this); dashboard();
-        IncidentReminderScheduler.schedule(this);
+        if(IncidentReminderScheduler.isEnabled(this)) IncidentReminderScheduler.schedule(this);
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},7304);
         }
@@ -779,8 +779,33 @@ public class MainActivity extends Activity {
         body.addView(settingItem("区域管理",()->showCatalog("区域管理",new String[]{"造粒","仓库"})));
         body.addView(sectionTitle("数据安全"));
         body.addView(settingItem("数据备份",this::startBackup));
-        body.addView(settingItem("从备份恢复数据",this::chooseRestore)); body.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
+        body.addView(settingItem("从备份恢复数据",this::chooseRestore));
         body.addView(settingItem("照片 / 视频附件完整性",this::checkAttachmentIntegrity));
+        body.addView(sectionTitle("消息通知"));
+        LinearLayout reminderRow=new LinearLayout(this);
+        reminderRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        reminderRow.setPadding(15,10,12,10);
+        reminderRow.setBackground(rounded(0xFFFFFFFF,16));
+        TextView reminderText=new TextView(this);
+        reminderText.setText("整改期限通知\\n每天检查逾期及未来 7 天到期任务");
+        reminderText.setTextColor(ink);reminderText.setTextSize(14);reminderText.setTypeface(null,Typeface.BOLD);
+        reminderRow.addView(reminderText,new LinearLayout.LayoutParams(0,-2,1));
+        Switch reminderSwitch=new Switch(this);
+        reminderSwitch.setChecked(IncidentReminderScheduler.isEnabled(this));
+        reminderRow.addView(reminderSwitch);
+        reminderSwitch.setOnCheckedChangeListener((button,enabled)->{
+            getSharedPreferences("incident_settings",MODE_PRIVATE).edit().putBoolean("reminders_enabled",enabled).apply();
+            if(enabled) IncidentReminderScheduler.schedule(this);
+            else {
+                IncidentReminderScheduler.cancel(this);
+                android.app.NotificationManager manager=(android.app.NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+                manager.cancel(7303);
+            }
+            Toast.makeText(this,enabled?"整改通知已开启":"整改通知已关闭",Toast.LENGTH_SHORT).show();
+        });
+        LinearLayout.LayoutParams reminderLp=new LinearLayout.LayoutParams(-1,-2);
+        reminderLp.setMargins(2,4,2,6);body.addView(reminderRow,reminderLp);
+        body.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
         body.addView(sectionTitle("系统设置"));
         body.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
             .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
