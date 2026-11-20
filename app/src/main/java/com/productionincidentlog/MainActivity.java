@@ -368,6 +368,17 @@ public class MainActivity extends Activity {
         String today=new SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(new Date());
         EditText from=field(body,"开始日期（yyyy-MM-dd）","留空表示不限",today.substring(0,8)+"01",1);
         EditText to=field(body,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
+        String[] rangeNames={"本月","本季度","本年度","自定义"};
+        for(int ri=0;ri<rangeNames.length;ri++){final int mode=ri;TextView chip=new TextView(this);chip.setText(rangeNames[ri]);chip.setGravity(android.view.Gravity.CENTER);
+            chip.setTextColor(blue);chip.setTextSize(13);chip.setTypeface(null,Typeface.BOLD);chip.setPadding(5,12,5,12);chip.setBackground(rounded(0xFFE7F0FF,16));
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.setMargins(3,4,3,8);ranges.addView(chip,cp);
+            chip.setOnClickListener(v->{if(mode==3){from.requestFocus();return;}Calendar cal=Calendar.getInstance();cal.setTime(new Date());
+                if(mode==0)cal.set(Calendar.DAY_OF_MONTH,1);else if(mode==1){int q=cal.get(Calendar.MONTH)/3;cal.set(Calendar.MONTH,q*3);cal.set(Calendar.DAY_OF_MONTH,1);}
+                else{cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);}
+                from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));to.setText(today);});
+        }
+        body.addView(ranges);
         Spinner team=spinner(body,"班组",java.util.Arrays.asList("全部班组","A班","B班"));
         Spinner area=spinner(body,"区域",java.util.Arrays.asList("全部区域","造粒","仓库"));
         Spinner type=spinner(body,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
