@@ -147,6 +147,16 @@ public class MainActivity extends Activity {
                                 }).show();
                         }).show();
                 }));
+                list.addView(button("编辑事故档案", () -> editIncident(r)));
+                list.addView(button("删除事故档案", () -> new AlertDialog.Builder(this)
+                    .setTitle("确认删除事故")
+                    .setMessage("删除后将同时删除该事故关联的照片和视频附件，且无法恢复。\n\n事故编号："+r[0])
+                    .setNegativeButton("取消",null)
+                    .setPositiveButton("确认删除",(dialog,which) -> {
+                        db.deleteIncident(r[0]);
+                        Toast.makeText(this,"事故档案已删除",Toast.LENGTH_SHORT).show();
+                        refresh.run();
+                    }).show()));
             }
             if (rows.isEmpty()) list.addView(card("暂无事故记录","登记事故后会显示在这里"));
         };
@@ -158,6 +168,50 @@ public class MainActivity extends Activity {
         refresh.run(); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         root.addView(button("返回首页",this::dashboard));
     }
+
+    private void editIncident(String[] r) {
+        page("编辑事故档案");
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout form = new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); scroll.addView(form);
+        EditText date = field(form,"发生日期与时间","yyyy-MM-dd HH:mm",r[1],1);
+        Spinner team = spinner(form,"班组",java.util.Arrays.asList("A班","B班"));
+        team.setSelection(Math.max(0,java.util.Arrays.asList("A班","B班").indexOf(r[2])));
+        Spinner area = spinner(form,"发生区域",java.util.Arrays.asList("造粒","仓库"));
+        area.setSelection(Math.max(0,java.util.Arrays.asList("造粒","仓库").indexOf(r[3])));
+        Spinner type = spinner(form,"事故类型",java.util.Arrays.asList("设备损伤","物料混料","人员受伤"));
+        type.setSelection(Math.max(0,java.util.Arrays.asList("设备损伤","物料混料","人员受伤").indexOf(r[4])));
+        List<String> equipmentNames = db.equipmentNames();
+        if (!equipmentNames.contains(r[5])) equipmentNames.add(0,r[5]);
+        if (equipmentNames.isEmpty()) equipmentNames.add("未指定");
+        Spinner equipment = spinner(form,"设备名称",equipmentNames);
+        equipment.setSelection(Math.max(0,equipmentNames.indexOf(r[5])));
+        EditText people = field(form,"涉事人员","人员姓名或工号",r[6],1);
+        EditText description = field(form,"一、事故经过","客观描述事故发生过程",r[7],3);
+        EditText analysis = field(form,"二、事故分析","分析事故过程及影响",r[8],3);
+        EditText cause = field(form,"三、事故原因","直接原因和根本原因",r[9],3);
+        EditText action = field(form,"四、当下采取措施","现场处置和临时控制措施",r[10],3);
+        EditText prevention = field(form,"五、未来如何避免","长期整改和预防措施",r[11],3);
+        EditText owner = field(form,"整改负责人","负责推动整改的人",r[12],1);
+        EditText dueDate = field(form,"整改期限（yyyy-MM-dd）","例如：2026-11-30",r[13],1);
+        TextView status = new TextView(this); status.setText("当前整改状态："+r[14]+"（状态可在详情中单独更新）"); status.setTextColor(ink); status.setPadding(4,12,4,12); form.addView(status);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(button("保存修改",() -> {
+            String d=date.getText().toString().trim();
+            if(d.isEmpty() || description.getText().toString().trim().isEmpty() || analysis.getText().toString().trim().isEmpty()
+                || cause.getText().toString().trim().isEmpty() || action.getText().toString().trim().isEmpty()
+                || prevention.getText().toString().trim().isEmpty()) {
+                Toast.makeText(this,"请填写发生时间及五项事故内容",Toast.LENGTH_LONG).show(); return;
+            }
+            db.updateIncident(r[0],d,team.getSelectedItem().toString(),area.getSelectedItem().toString(),
+                type.getSelectedItem().toString(),equipment.getSelectedItem().toString(),people.getText().toString(),
+                description.getText().toString(),analysis.getText().toString(),cause.getText().toString(),
+                action.getText().toString(),prevention.getText().toString(),owner.getText().toString(),dueDate.getText().toString());
+            Toast.makeText(this,"事故档案修改成功："+r[0],Toast.LENGTH_LONG).show();
+            records();
+        }));
+        root.addView(button("取消返回档案",this::records));
+    }
+
     private void equipment() {
         page("设备档案管理");
         TextView note = new TextView(this); note.setText("事故登记时从统一设备档案选择，避免同一设备出现多个名称。"); note.setTextColor(ink); root.addView(note);
