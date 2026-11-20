@@ -58,49 +58,85 @@ public class IncidentExporter {
     private static void appendStats(StringBuilder b,String group,Map<String,Integer> map) {
         for(Map.Entry<String,Integer> e:map.entrySet()) b.append(row(group,e.getKey(),String.valueOf(e.getValue())));
     }
+    private static class PdfPageWriter {
+        final PdfDocument pdf;
+        final Paint paint;
+        final String from,to;
+        final int total;
+        PdfDocument.Page page;
+        Canvas canvas;
+        int pageNo=0,y=0;
+        PdfPageWriter(PdfDocument pdf,Paint paint,String from,String to,int total) {
+            this.pdf=pdf;this.paint=paint;this.from=from;this.to=to;this.total=total;
+            newPage();
+        }
+        void newPage() {
+            if(page!=null) pdf.finishPage(page);
+            PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,++pageNo).create();
+            page=pdf.startPage(info);canvas=page.getCanvas();y=42;
+            paint.setColor(Color.BLACK);paint.setTextSize(17);
+            paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+            canvas.drawText("生产事故报告",40,y,paint);y+=25;
+            paint.setTextSize(9);paint.setTypeface(Typeface.DEFAULT);
+            canvas.drawText("统计范围："+(from.isEmpty()?"不限":from)+" 至 "+(to.isEmpty()?"不限":to)+"    事故总数："+total,40,y,paint);y+=22;
+            canvas.drawLine(40,y,555,y,paint);y+=20;
+        }
+        void ensure(int height) { if(y+height>800) newPage(); }
+        void line(String text,boolean bold,float left) {
+            ensure(15);
+            paint.setTextSize(9);
+            paint.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.DEFAULT);
+            canvas.drawText(text,left,y,paint);y+=14;
+        }
+        void wrapped(String label,String value) {
+            String remaining=(label==null?"":label)+(value==null?"":value);
+            if(remaining.isEmpty()) remaining="—";
+            paint.setTextSize(9);paint.setTypeface(Typeface.DEFAULT);
+            float maxWidth=515;
+            boolean first=true;
+            while(!remaining.isEmpty()) {
+                String prefix=first?"":"  ";
+                float width=paint.measureText(prefix);
+                int end=0;
+                while(end<remaining.length()) {
+                    float next=paint.measureText(remaining.substring(end,end+1));
+                    if(width+next>maxWidth && end>0) break;
+                    width+=next;end++;
+                }
+                if(end==0) end=1;
+                line(prefix+remaining.substring(0,end),false,first?40:52);
+                remaining=remaining.substring(end);first=false;
+            }
+        }
+        void finish() { if(page!=null){pdf.finishPage(page);page=null;} }
+    }
     public static File writePdf(Context context,List<String[]> rows,String from,String to) throws Exception {
         PdfDocument pdf=new PdfDocument();
-        Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG); paint.setColor(Color.BLACK); paint.setTextSize(10);
-        int pageNo=1; PdfDocument.Page page=null; Canvas canvas=null; int y=0;
-        for(int i=0;i<rows.size()+1;i++) {
-            if(page==null || y>780) {
-                if(page!=null) pdf.finishPage(page);
-                PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,pageNo++).create();
-                page=pdf.startPage(info); canvas=page.getCanvas(); y=42;
-                paint.setTextSize(17); paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-                canvas.drawText("生产事故报告",40,y,paint); y+=25;
-                paint.setTextSize(9); paint.setTypeface(Typeface.DEFAULT);
-                canvas.drawText("统计范围："+(from.isEmpty()?"不限":from)+" 至 "+(to.isEmpty()?"不限":to)+"    事故总数："+rows.size(),40,y,paint); y+=22;
-                canvas.drawLine(40,y,555,y,paint); y+=20;
-            }
-            if(i==0) {
-                paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-                canvas.drawText("事故档案明细",40,y,paint); y+=18;
-                paint.setTypeface(Typeface.DEFAULT);
-                if(rows.isEmpty()) { canvas.drawText("该时间范围内暂无事故记录。",40,y,paint); y+=18; }
-                continue;
-            }
-            String[] r=rows.get(i-1);
-            String[] labels={"编号：","时间：","班组/区域：","类型/设备：","涉事人员：","事故经过：","事故分析：","事故原因：","当下措施：","未来预防：","整改负责人/期限/状态："};
-            String[] values={r[0],r[1],r[2]+" / "+r[3],r[4]+" / "+r[5],r[6],r[7],r[8],r[9],r[10],r[11],r[12]+" / "+r[13]+" / "+r[14]};
-            paint.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-            canvas.drawText(labels[0]+values[0],40,y,paint); y+=15;
-            paint.setTypeface(Typeface.DEFAULT);
-            for(int j=1;j<labels.length;j++) {
-                String line=labels[j]+values[j];
-                int max=76;
-                while(line.length()>max) {
-                    canvas.drawText(line.substring(0,max),48,y,paint); y+=13; line=line.substring(max);
-                }
-                canvas.drawText(line,48,y,paint); y+=14;
-            }
-            y+=8; canvas.drawLine(40,y,555,y,paint); y+=14;
+        Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+        PdfPageWriter writer=new PdfPageWriter(pdf,paint,from,to,rows.size());
+        writer.line("事故档案明细",true,40);
+        if(rows.isEmpty()) writer.wrapped("","该时间范围内暂无事故记录。");
+        for(String[] r:rows) {
+            writer.wrapped("编号：",r[0]);
+            writer.wrapped("时间：",r[1]);
+            writer.wrapped("班组 / 区域：",r[2]+" / "+r[3]);
+            writer.wrapped("类型 / 设备：",r[4]+" / "+r[5]);
+            writer.wrapped("涉事人员：",r[6]);
+            writer.wrapped("事故经过：",r[7]);
+            writer.wrapped("事故分析：",r[8]);
+            writer.wrapped("事故原因：",r[9]);
+            writer.wrapped("当下措施：",r[10]);
+            writer.wrapped("未来预防：",r[11]);
+            writer.wrapped("整改负责人 / 期限 / 状态：",r[12]+" / "+r[13]+" / "+r[14]);
+            writer.ensure(14);
+            writer.line("────────────────────────────────────────",false,40);
         }
-        if(page!=null) pdf.finishPage(page);
-        File dir=new File(context.getCacheDir(),"exports"); if(!dir.exists()) dir.mkdirs();
+        writer.finish();
+        File dir=new File(context.getCacheDir(),"exports");if(!dir.exists()&&!dir.mkdirs())throw new IOException("无法创建报表目录");
         String stamp=new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date());
         File file=new File(dir,"生产事故报告_"+stamp+".pdf");
-        try(FileOutputStream out=new FileOutputStream(file)) { pdf.writeTo(out); }
-        pdf.close(); return file;
+        try(FileOutputStream out=new FileOutputStream(file)){pdf.writeTo(out);}
+        pdf.close();return file;
     }
+}
 }
