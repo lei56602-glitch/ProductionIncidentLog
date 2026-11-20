@@ -494,6 +494,12 @@ public class MainActivity extends Activity {
         pendingAttachments=new java.util.ArrayList<>(draft.attachments);
         incidentForm(draft.type,draft);
     }
+    private int safeMonth(String day) {
+        if(day==null || day.length()<7) return -1;
+        try { int month=Integer.parseInt(day.substring(5,7)); return month>=1 && month<=12?month:-1; }
+        catch(Exception ignored) { return -1; }
+    }
+
     private void records() {
         page("事故记录");
         EditText search=new EditText(this);
@@ -545,10 +551,9 @@ public class MainActivity extends Activity {
                 String occurred=r[1]==null?"":r[1];
                 String day=occurred.length()>=10?occurred.substring(0,10):"";
                 if("本月".equals(period) && !occurred.startsWith(currentMonth)) continue;
-                if("本季度".equals(period) && (day.length()<7 ||
-                    !day.startsWith(String.format(Locale.US,"%04d-",currentYear)) ||
-                    Integer.parseInt(day.substring(5,7))<quarterStart ||
-                    Integer.parseInt(day.substring(5,7))>quarterStart+2)) continue;
+                int occurredMonth=safeMonth(day);
+                if("本季度".equals(period) && (occurredMonth<quarterStart || occurredMonth>quarterStart+2 ||
+                    !day.startsWith(String.format(Locale.US,"%04d-",currentYear)))) continue;
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
                 if("已逾期".equals(statusChoice)) {
