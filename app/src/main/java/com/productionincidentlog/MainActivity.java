@@ -509,6 +509,7 @@ public class MainActivity extends Activity {
         filters.setOrientation(LinearLayout.HORIZONTAL);
         Spinner timeFilter=spinner(filters,"",java.util.Arrays.asList("全部时间","本月","本季度","本年度"));
         Spinner typeFilter=spinner(filters,"",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
+        Spinner statusFilter=spinner(filters,"",java.util.Arrays.asList("全部状态","待整改","整改中","已完成","已逾期"));
         Spinner areaFilter=spinner(filters,"",catalogFilter("area","全部区域"));
         Spinner teamFilter=spinner(filters,"",catalogFilter("team","全部班组"));
         List<String> deviceChoices=new java.util.ArrayList<>();
@@ -530,6 +531,8 @@ public class MainActivity extends Activity {
             List<String[]> rows=db.incidents(search.getText().toString());
             String period=timeFilter.getSelectedItem().toString();
             String typeChoice=typeFilter.getSelectedItem().toString();
+            String statusChoice=statusFilter.getSelectedItem().toString();
+            String todayFilter=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
             String areaChoice=areaFilter.getSelectedItem().toString();
             String teamChoice=teamFilter.getSelectedItem().toString();
             String deviceChoice=deviceFilter.getSelectedItem().toString();
@@ -548,6 +551,9 @@ public class MainActivity extends Activity {
                     Integer.parseInt(day.substring(5,7))>quarterStart+2)) continue;
                 if("本年度".equals(period) && !occurred.startsWith(String.valueOf(currentYear))) continue;
                 if(!"全部类型".equals(typeChoice) && !typeChoice.equals(r[4])) continue;
+                if("已逾期".equals(statusChoice)) {
+                    if("已完成".equals(r[14]) || r[13]==null || r[13].trim().isEmpty() || r[13].compareTo(todayFilter)>=0) continue;
+                } else if(!"全部状态".equals(statusChoice) && !statusChoice.equals(r[14])) continue;
                 if(!"全部区域".equals(areaChoice) && !areaChoice.equals(r[3])) continue;
                 if(!"全部班组".equals(teamChoice) && !teamChoice.equals(r[2])) continue;
                 if(!"全部设备".equals(deviceChoice) && !deviceChoice.equals(r[5])) continue;
@@ -656,6 +662,7 @@ public class MainActivity extends Activity {
             };
         timeFilter.setOnItemSelectedListener(filterListener);
         typeFilter.setOnItemSelectedListener(filterListener);
+        statusFilter.setOnItemSelectedListener(filterListener);
         areaFilter.setOnItemSelectedListener(filterListener);
         teamFilter.setOnItemSelectedListener(filterListener);
         deviceFilter.setOnItemSelectedListener(filterListener);
