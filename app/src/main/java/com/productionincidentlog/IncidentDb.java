@@ -9,19 +9,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class IncidentDb extends SQLiteOpenHelper {
-    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 1); }
+    public IncidentDb(Context context) { super(context, "production_incidents.db", null, 2); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE equipment(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,active INTEGER NOT NULL DEFAULT 1)");
         db.execSQL("CREATE TABLE incidents(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,occurred_at TEXT NOT NULL,team TEXT NOT NULL,area TEXT NOT NULL,type TEXT NOT NULL,equipment TEXT NOT NULL,people TEXT,description TEXT NOT NULL,analysis TEXT NOT NULL,cause TEXT NOT NULL,immediate_action TEXT NOT NULL,prevention TEXT NOT NULL,owner TEXT,due_date TEXT,status TEXT NOT NULL DEFAULT '待整改',created_at TEXT NOT NULL)");
         seed(db, "滚筒"); seed(db, "除湿机");
+        db.execSQL("CREATE TABLE incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
     }
 
     private void seed(SQLiteDatabase db, String name) {
         ContentValues v = new ContentValues(); v.put("name", name);
         db.insertWithOnConflict("equipment", null, v, SQLiteDatabase.CONFLICT_IGNORE);
     }
-    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) { }
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS incident_attachments(id INTEGER PRIMARY KEY AUTOINCREMENT,incident_code TEXT NOT NULL,uri TEXT NOT NULL,mime_type TEXT NOT NULL,added_at TEXT NOT NULL,FOREIGN KEY(incident_code) REFERENCES incidents(code) ON DELETE CASCADE)");
+    }
 
     public List<String> equipmentNames() {
         List<String> names = new ArrayList<>();
@@ -80,6 +83,21 @@ public class IncidentDb extends SQLiteOpenHelper {
                 for (int i=0;i<15;i++) row[i] = c.isNull(i) ? "" : c.getString(i);
                 rows.add(row);
             }
+        }
+        return rows;
+    }
+
+
+    public void addAttachment(String code, String uri, String mimeType) {
+        ContentValues v = new ContentValues();
+        v.put("incident_code", code); v.put("uri", uri); v.put("mime_type", mimeType);
+        v.put("added_at", String.valueOf(System.currentTimeMillis()));
+        getWritableDatabase().insert("incident_attachments", null, v);
+    }
+    public List<String[]> attachments(String code) {
+        List<String[]> rows = new ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT uri,mime_type,added_at FROM incident_attachments WHERE incident_code=? ORDER BY id", new String[]{code})) {
+            while (c.moveToNext()) rows.add(new String[]{c.getString(0),c.getString(1),c.getString(2)});
         }
         return rows;
     }
