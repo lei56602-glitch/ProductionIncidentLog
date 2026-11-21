@@ -1119,7 +1119,7 @@ public class MainActivity extends Activity {
         notifications.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
         LinearLayout system=settingsGroup(body,"系统信息","查看当前安装版本与功能范围");
         system.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
-            .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
+            .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / Word / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
         addAdaptiveScroll(scroll);
         addBottomNav("我的");
