@@ -172,6 +172,9 @@ public class IncidentDb extends SQLiteOpenHelper {
         }
         return rows;
     }
+    public int deleteAttachment(String code,String uri) {
+        return getWritableDatabase().delete("incident_attachments","incident_code=? AND uri=?",new String[]{code,uri});
+    }
 
 
 
