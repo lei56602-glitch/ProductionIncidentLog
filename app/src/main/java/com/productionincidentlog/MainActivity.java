@@ -83,7 +83,9 @@ public class MainActivity extends Activity {
         if(bars!=null){bars.setAppearanceLightStatusBars(true);bars.setAppearanceLightNavigationBars(true);}
         ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)->{
             androidx.core.graphics.Insets safe=insets.getInsets(WindowInsetsCompat.Type.systemBars()|WindowInsetsCompat.Type.displayCutout());
-            view.setPadding(dp(16)+safe.left,dp(8)+safe.top,dp(16)+safe.right,dp(8)+safe.bottom);
+            androidx.core.graphics.Insets ime=insets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottom=Math.max(safe.bottom,ime.bottom);
+            view.setPadding(dp(16)+safe.left,dp(8)+safe.top,dp(16)+safe.right,dp(8)+bottom);
             return insets;
         });
         setContentView(root);
@@ -385,7 +387,11 @@ public class MainActivity extends Activity {
         TextView l=new TextView(this); l.setText(label); l.setTextColor(ink); l.setTypeface(null,Typeface.BOLD); l.setTextSize(14); l.setPadding(2,12,2,5); box.addView(l);
         EditText e=new EditText(this); e.setHint(hint); e.setText(initial); e.setMinLines(lines); e.setTextSize(15); e.setTextColor(ink);
         e.setPadding(dp(14),dp(12),dp(14),dp(12)); e.setBackground(rounded(0xFFFFFFFF,dp(14))); e.setElevation(dp(1));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,dp(8)); box.addView(e,p); return e;
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,0,0,dp(8)); box.addView(e,p);
+        e.setOnFocusChangeListener((view,hasFocus)->{
+            if(hasFocus) e.post(()->e.requestRectangleOnScreen(new android.graphics.Rect(0,0,e.getWidth(),e.getHeight()),true));
+        });
+        return e;
     }
     private List<String> catalogChoices(String category,String current) {
         List<String> values=db.catalogNames(category);
@@ -839,7 +845,7 @@ public class MainActivity extends Activity {
                     imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     imageView.setBackground(rounded(0xFFE5EDF6,12));
                     try{imageView.setImageURI(android.net.Uri.parse(attachment[0]));}catch(Exception ignored){}
-                    imageView.setOnClickListener(v->showAttachments(r[0]));
+                    imageView.setOnClickListener(v->openAttachment(attachment[0],attachment[1]));
                     mediaTile=imageView;
                 } else {
                     LinearLayout videoTile=new LinearLayout(this);
@@ -849,14 +855,34 @@ public class MainActivity extends Activity {
                     TextView play=new TextView(this);play.setText("▶");play.setTextSize(28);play.setTextColor(blue);play.setGravity(android.view.Gravity.CENTER);
                     TextView videoLabel=new TextView(this);videoLabel.setText("视频");videoLabel.setTextSize(12);videoLabel.setTextColor(ink);
                     videoTile.addView(play);videoTile.addView(videoLabel);
-                    videoTile.setOnClickListener(v->showAttachments(r[0]));
+                    videoTile.setOnClickListener(v->openAttachment(attachment[0],attachment[1]));
                     mediaTile=videoTile;
                 }
                 android.widget.GridLayout.LayoutParams tileLp=new android.widget.GridLayout.LayoutParams(
                     android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f),
                     android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f));
                 tileLp.width=cell;tileLp.height=cell;tileLp.setMargins(gap/2,gap/2,gap/2,gap/2);
-                mediaGrid.addView(mediaTile,tileLp);
+                android.widget.FrameLayout mediaFrame=new android.widget.FrameLayout(this);
+                mediaFrame.addView(mediaTile,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                TextView removeAttachment=new TextView(this);
+                removeAttachment.setText("×");removeAttachment.setTextColor(0xFFFFFFFF);
+                removeAttachment.setTextSize(18);removeAttachment.setTypeface(null,Typeface.BOLD);
+                removeAttachment.setGravity(android.view.Gravity.CENTER);
+                removeAttachment.setBackground(rounded(0xFFE04444,30));
+                android.widget.FrameLayout.LayoutParams removeLp=new android.widget.FrameLayout.LayoutParams(dp(25),dp(25),android.view.Gravity.TOP|android.view.Gravity.RIGHT);
+                removeLp.setMargins(0,dp(3),dp(3),0);mediaFrame.addView(removeAttachment,removeLp);
+                removeAttachment.setOnClickListener(v->new AlertDialog.Builder(this)
+                    .setTitle("删除附件").setMessage("确定从这起事故档案中删除该照片 / 视频吗？")
+                    .setNegativeButton("取消",null).setPositiveButton("删除",(dialog,which)->{
+                        java.io.File owned=ownedAttachmentFile(attachment[0]);
+                        db.deleteAttachment(r[0],attachment[0]);
+                        if(owned!=null && owned.isFile()) owned.delete();
+                        java.io.File parent=owned==null?null:owned.getParentFile();
+                        if(parent!=null && parent.isDirectory()){java.io.File[] left=parent.listFiles();if(left!=null&&left.length==0)parent.delete();}
+                        Toast.makeText(this,"附件已删除",Toast.LENGTH_SHORT).show();
+                        List<String[]> latest=db.incidents(r[0]);if(!latest.isEmpty())showIncidentDetail(latest.get(0));else records();
+                    }).show());
+                mediaGrid.addView(mediaFrame,tileLp);
             }
             body.addView(mediaGrid);
         }
@@ -1093,7 +1119,7 @@ public class MainActivity extends Activity {
         notifications.addView(settingItem("立即检查整改提醒",this::checkRemindersNow));
         LinearLayout system=settingsGroup(body,"系统信息","查看当前安装版本与功能范围");
         system.addView(button("关于我们 / 版本信息  ›",()->new AlertDialog.Builder(this).setTitle("生产事故管理系统")
-            .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / PDF 报表、数据备份恢复")
+            .setMessage("版本：1.0.0\n数据存储：本机 SQLite\n支持：事故登记、整改跟踪、统计分析、Excel / Word / PDF 报表、数据备份恢复")
             .setPositiveButton("关闭",null).show()));
         addAdaptiveScroll(scroll);
         addBottomNav("我的");
@@ -1212,7 +1238,9 @@ public class MainActivity extends Activity {
                 result.addView(new IncidentBarChart(this,labels,values));
             }
         };
-        body.addView(button("应用筛选并统计",calculate)); body.addView(result);
+        body.addView(button("应用筛选并统计",calculate));
+        body.addView(button("导出报表（Excel / Word / PDF）",this::exportCenter));
+        body.addView(result);
         android.widget.AdapterView.OnItemSelectedListener statsFilterListener=new android.widget.AdapterView.OnItemSelectedListener(){
             public void onItemSelected(android.widget.AdapterView<?> parent,android.view.View view,int position,long id){calculate.run();}
             public void onNothingSelected(android.widget.AdapterView<?> parent){}
@@ -1281,118 +1309,79 @@ public class MainActivity extends Activity {
     }
 
     private void exportCenter() {
-        page("事故报表中心");
+        page("事故报表导出");
         ScrollView reportScroll=new ScrollView(this);
-        LinearLayout reportBody=new LinearLayout(this); reportBody.setOrientation(LinearLayout.VERTICAL); reportBody.setPadding(5,8,5,12); reportScroll.addView(reportBody);
-        TextView tip = new TextView(this);
-        tip.setText("按发生日期筛选事故。Excel 文件包含事故汇总、详细记录、统计分析三个工作表；PDF 用于查看和打印。");
-        tip.setTextColor(0xFF64748B); tip.setTextSize(14); tip.setPadding(10,8,10,12); reportBody.addView(tip);
-        reportBody.addView(sectionTitle("报表筛选"));
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-        String monthStart = today.substring(0,8) + "01";
-        EditText from = field(reportBody,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
-        EditText to = field(reportBody,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
-        LinearLayout ranges=new LinearLayout(this); ranges.setOrientation(LinearLayout.HORIZONTAL);
-        String[] rangeNames={"本月","本季度","本年度","自定义"};
-        for(int ri=0;ri<rangeNames.length;ri++){ final int mode=ri; TextView chip=new TextView(this); chip.setText(rangeNames[ri]); chip.setGravity(android.view.Gravity.CENTER);
-            chip.setTextColor(mode==0?0xFFFFFFFF:blue); chip.setTextSize(13); chip.setTypeface(null,Typeface.BOLD); chip.setPadding(5,12,5,12); chip.setBackground(rounded(mode==0?0xFF1677E8:0xFFE7F0FF,16));
-            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1); cp.setMargins(3,4,3,8); ranges.addView(chip,cp);
-            chip.setOnClickListener(v->{ for(int k=0;k<ranges.getChildCount();k++){TextView item=(TextView)ranges.getChildAt(k);item.setBackground(rounded(k==mode?0xFF1677E8:0xFFE7F0FF,16));item.setTextColor(k==mode?0xFFFFFFFF:blue);} if(mode==3){from.requestFocus();return;} Calendar cal=Calendar.getInstance(); cal.setTime(new Date());
-                if(mode==0) cal.set(Calendar.DAY_OF_MONTH,1);
+        LinearLayout reportBody=new LinearLayout(this);
+        reportBody.setOrientation(LinearLayout.VERTICAL);
+        reportBody.setPadding(5,8,5,12);
+        reportScroll.addView(reportBody);
+        TextView tip=new TextView(this);
+        tip.setText("先设置筛选条件，再选择导出格式。Excel 为标准 .xlsx，Word 为可编辑 .docx，PDF 可直接打印。三种格式导出的都是当前筛选结果。");
+        tip.setTextColor(0xFF64748B);tip.setTextSize(14);tip.setPadding(10,8,10,12);reportBody.addView(tip);
+        reportBody.addView(sectionTitle("报表筛选条件"));
+        String today=new SimpleDateFormat("yyyy-MM-dd",Locale.getDefault()).format(new Date());
+        String monthStart=today.substring(0,8)+"01";
+        EditText from=field(reportBody,"开始日期（yyyy-MM-dd）","留空表示不限",monthStart,1);
+        EditText to=field(reportBody,"结束日期（yyyy-MM-dd）","留空表示不限",today,1);
+        LinearLayout ranges=new LinearLayout(this);ranges.setOrientation(LinearLayout.HORIZONTAL);
+        String[] rangeNames={"本月","本季度","本年度","不限日期"};
+        for(int i=0;i<rangeNames.length;i++){
+            final int mode=i;TextView chip=new TextView(this);chip.setText(rangeNames[i]);
+            chip.setGravity(android.view.Gravity.CENTER);chip.setTextColor(blue);chip.setTextSize(12);
+            chip.setTypeface(null,Typeface.BOLD);chip.setPadding(5,12,5,12);
+            chip.setBackground(rounded(0xFFE7F0FF,14));
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,-2,1);cp.setMargins(3,4,3,8);ranges.addView(chip,cp);
+            chip.setOnClickListener(v->{
+                if(mode==3){from.setText("");to.setText("");return;}
+                Calendar cal=Calendar.getInstance();
+                if(mode==0)cal.set(Calendar.DAY_OF_MONTH,1);
                 else if(mode==1){int q=cal.get(Calendar.MONTH)/3;cal.set(Calendar.MONTH,q*3);cal.set(Calendar.DAY_OF_MONTH,1);}
                 else {cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);}
-                from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime())); to.setText(today);
+                from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));to.setText(today);
             });
         }
         reportBody.addView(ranges);
-        Spinner team = spinner(reportBody,"班组",catalogFilter("team","全部班组"));
-        Spinner area = spinner(reportBody,"区域",catalogFilter("area","全部区域"));
-        Spinner type = spinner(reportBody,"事故类型",java.util.Arrays.asList("全部类型","设备损伤","物料混料","人员受伤"));
-        List<String> equipmentOptions = new java.util.ArrayList<>();
-        equipmentOptions.add("全部设备"); equipmentOptions.addAll(db.equipmentNames());
-        Spinner equipment = spinner(reportBody,"设备名称",equipmentOptions);
-        TextView count = new TextView(this); count.setText("当前符合条件：待查询"); count.setTextColor(ink); reportBody.addView(count);
-        final List<String[]>[] selected = new List[]{new java.util.ArrayList<String[]>()};
-        final boolean[] loadValid={false};
-        Runnable load = () -> {
-            loadValid[0]=false;
-            String f=from.getText().toString().trim(), t=to.getText().toString().trim();
-            if (!validDueDate(f) || !validDueDate(t)) {
-                Toast.makeText(this,"日期无效，请使用真实日期 yyyy-MM-dd",Toast.LENGTH_SHORT).show(); return;
-            }
-            if (!f.isEmpty() && !t.isEmpty() && f.compareTo(t)>0) {
-                Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show(); return;
-            }
-            selected[0]=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),
-                area.getSelectedItem().toString(),type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
-            count.setText("当前符合条件："+selected[0].size()+" 起事故");
-            loadValid[0]=true;
+        Spinner team=spinner(reportBody,"班组",catalogFilter("team","全部班组"));
+        Spinner area=spinner(reportBody,"区域",catalogFilter("area","全部区域"));
+        Spinner type=spinner(reportBody,"事故类型",catalogFilter("type","全部类型"));
+        List<String> equipmentOptions=new java.util.ArrayList<>();equipmentOptions.add("全部设备");equipmentOptions.addAll(db.equipmentNames());
+        Spinner equipment=spinner(reportBody,"设备名称",equipmentOptions);
+        TextView count=new TextView(this);count.setText("当前符合条件：尚未查询");count.setTextColor(ink);count.setTextSize(15);count.setPadding(8,12,8,8);reportBody.addView(count);
+        final List<String[]>[] selected=new List[]{new java.util.ArrayList<String[]>()};
+        final boolean[] valid={false};
+        Runnable load=()->{
+            valid[0]=false;
+            String f=from.getText().toString().trim(),t=to.getText().toString().trim();
+            if(!validDueDate(f)||!validDueDate(t)){Toast.makeText(this,"日期无效，请使用 yyyy-MM-dd",Toast.LENGTH_SHORT).show();return;}
+            if(!f.isEmpty()&&!t.isEmpty()&&f.compareTo(t)>0){Toast.makeText(this,"开始日期不能晚于结束日期",Toast.LENGTH_SHORT).show();return;}
+            selected[0]=db.incidentsFiltered(f,t,team.getSelectedItem().toString(),area.getSelectedItem().toString(),
+                type.getSelectedItem().toString(),equipment.getSelectedItem().toString());
+            count.setText("当前符合条件："+selected[0].size()+" 起事故");valid[0]=true;
         };
-        reportBody.addView(sectionTitle("选择报表类型"));
-        final int[] reportChoice={0};
-        String[] reportTitles={"月度事故报告","年度事故报告","事故统计报表"};
-        String[] reportSubtitles={"PDF · 本月事故汇总及详细记录","PDF · 本年度事故汇总及详细记录","Excel · 汇总、详细记录、统计分析三个工作表"};
-        TextView[] reportCards=new TextView[3];
-        LinearLayout reportOptions=new LinearLayout(this);
-        reportOptions.setOrientation(LinearLayout.VERTICAL);
-        int[] reportIcons={0xFFE84C4C,0xFFE84C4C,0xFF16A36A};
-        for(int option=0;option<3;option++){
-            final int index=option;
-            TextView choice=new TextView(this);
-            reportCards[option]=choice;
-            choice.setText((option==2?"🟩":"🟥")+"   "+reportTitles[option]+"\n       "+reportSubtitles[option]+"\n       "+(option==0?"◉":"○"));
-            choice.setTextColor(ink);
-            choice.setTextSize(14);
-            choice.setTypeface(null,Typeface.BOLD);
-            choice.setPadding(15,15,12,15);
-            android.graphics.drawable.GradientDrawable initial=rounded(option==0?0xFFE7F0FF:0xFFFFFFFF,16);
-            initial.setStroke(option==0?2:1,option==0?blue:0xFFDCE5F0);
-            choice.setBackground(initial);
-            LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(-1,-2);
-            op.setMargins(2,4,2,4);
-            reportOptions.addView(choice,op);
-            choice.setOnClickListener(v->{
-                reportChoice[0]=index;
-                for(int k=0;k<3;k++){
-                    android.graphics.drawable.GradientDrawable selectedBg=rounded(k==index?0xFFE7F0FF:0xFFFFFFFF,16);
-                    selectedBg.setStroke(k==index?2:1,k==index?blue:0xFFDCE5F0);
-                    reportCards[k].setBackground(selectedBg);
-                    reportCards[k].setText((k==2?"🟩":"🟥")+"   "+reportTitles[k]+"\n       "+reportSubtitles[k]+"\n       "+(k==index?"◉":"○"));
-                    reportCards[k].setTextColor(k==index?blue:ink);
-                }
-                if(index==0){
-                    Calendar cal=Calendar.getInstance();cal.set(Calendar.DAY_OF_MONTH,1);
-                    from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));
-                    to.setText(today);
-                } else if(index==1){
-                    Calendar cal=Calendar.getInstance();cal.set(Calendar.MONTH,Calendar.JANUARY);cal.set(Calendar.DAY_OF_MONTH,1);
-                    from.setText(new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(cal.getTime()));
-                    to.setText(today);
-                }
-                load.run();
-            });
-        }
-        reportBody.addView(reportOptions);
-        reportCards[0].performClick();
-        reportBody.addView(button("查询报表范围",load));
-        reportBody.addView(button("生成所选报表",() -> {
-            load.run();
-            if(!loadValid[0]) return;
-            try {
-                if(reportChoice[0]==2){
-                    java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
-                    shareExport(file,"application/vnd.ms-excel");
-                } else {
-                    java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
-                    shareExport(file,"application/pdf");
-                }
-            } catch(Exception e) { Toast.makeText(this,"报表生成失败："+e.getMessage(),Toast.LENGTH_LONG).show(); }
+        reportBody.addView(button("查询当前筛选结果",load));
+        reportBody.addView(sectionTitle("选择导出格式"));
+        reportBody.addView(button("导出 Excel 工作簿（.xlsx）",()->{
+            load.run();if(!valid[0])return;
+            try{java.io.File file=IncidentExporter.writeExcel(this,selected[0],from.getText().toString(),to.getText().toString());
+                shareExport(file,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");}
+            catch(Exception e){Toast.makeText(this,"Excel 生成失败："+e.getMessage(),Toast.LENGTH_LONG).show();}
         }));
-        reportBody.addView(sectionTitle("导出说明"));
-        reportBody.addView(card("支持条件导出","可按班组、区域、事故类型、设备及自定义日期范围筛选"));
-        root.addView(reportScroll,new LinearLayout.LayoutParams(-1,0,1));
+        reportBody.addView(button("导出 Word 文档（.docx）",()->{
+            load.run();if(!valid[0])return;
+            try{java.io.File file=IncidentExporter.writeWord(this,selected[0],from.getText().toString(),to.getText().toString());
+                shareExport(file,"application/vnd.openxmlformats-officedocument.wordprocessingml.document");}
+            catch(Exception e){Toast.makeText(this,"Word 生成失败："+e.getMessage(),Toast.LENGTH_LONG).show();}
+        }));
+        reportBody.addView(button("导出 PDF 报告（.pdf）",()->{
+            load.run();if(!valid[0])return;
+            try{java.io.File file=IncidentExporter.writePdf(this,selected[0],from.getText().toString(),to.getText().toString());
+                shareExport(file,"application/pdf");}
+            catch(Exception e){Toast.makeText(this,"PDF 生成失败："+e.getMessage(),Toast.LENGTH_LONG).show();}
+        }));
+        reportBody.addView(card("导出内容","包含事故编号、时间、班组、区域、事故类型、设备、涉事人员、事故经过、分析、原因、处置措施、预防措施及整改负责人、期限和状态。"));
+        addAdaptiveScroll(reportScroll);
+        addBottomNav("统计");
     }
-
 
     private java.io.File attachmentDirectory() {
         java.io.File dir=new java.io.File(getFilesDir(),"incident_attachments");
@@ -1754,15 +1743,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void openAttachment(String rawUri,String mime) {
+        try {
+            android.net.Uri uri=android.net.Uri.parse(rawUri);
+            android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
+            view.setDataAndType(uri,mime==null||mime.trim().isEmpty()?"*/*":mime);
+            view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(view);
+        } catch (Exception e) {
+            Toast.makeText(this,"无法打开附件："+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
     private void showAttachments(String code) {
         List<String[]> items = db.attachments(code);
         if (items.isEmpty()) { new AlertDialog.Builder(this).setMessage("该事故没有现场照片或视频附件。").setPositiveButton("关闭",null).show(); return; }
+        if(items.size()==1) { openAttachment(items.get(0)[0],items.get(0)[1]); return; }
         String[] labels = new String[items.size()];
-        for (int i=0;i<items.size();i++) labels[i] = (items.get(i)[1].startsWith("video/") ? "视频 " : "照片 / 文件 ") + (i+1);
-        new AlertDialog.Builder(this).setTitle("现场附件").setItems(labels,(dialog,index) -> {
-            try { android.net.Uri uri=android.net.Uri.parse(items.get(index)[0]); android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW); view.setDataAndType(uri,items.get(index)[1]); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view); }
-            catch (Exception e) { Toast.makeText(this,"无法打开附件："+e.getMessage(),Toast.LENGTH_LONG).show(); }
-        }).setPositiveButton("关闭",null).show();
+        for (int i=0;i<items.size();i++) labels[i] = ((items.get(i)[1]!=null&&items.get(i)[1].startsWith("video/")) ? "视频 " : "照片 ") + (i+1);
+        new AlertDialog.Builder(this).setTitle("选择要查看的附件").setItems(labels,(dialog,index) ->
+            openAttachment(items.get(index)[0],items.get(index)[1])).setPositiveButton("关闭",null).show();
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
@@ -1786,36 +1785,44 @@ public class MainActivity extends Activity {
         if(attachmentPreview==null) return;
         attachmentPreview.removeAllViews();
         int size=(int)(88*getResources().getDisplayMetrics().density);
-        for(android.net.Uri uri:pendingAttachments) {
+        for(android.net.Uri uri:new java.util.ArrayList<>(pendingAttachments)) {
             String mime=getContentResolver().getType(uri);
+            android.widget.FrameLayout tile=new android.widget.FrameLayout(this);
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
+            p.setMargins(3,4,7,5);
             if(mime!=null && mime.startsWith("image/")) {
                 ImageView thumb=new ImageView(this);
                 thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                thumb.setBackground(rounded(0xFFE5EDF6,12));
                 try { thumb.setImageURI(uri); } catch(Exception ignored) {}
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
-                p.setMargins(3,4,7,5); attachmentPreview.addView(thumb,p);
-                thumb.setOnClickListener(v->{
-                    try { android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                        view.setDataAndType(uri,mime); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view);
-                    } catch(Exception e) { Toast.makeText(this,"无法预览附件",Toast.LENGTH_SHORT).show(); }
-                });
+                tile.addView(thumb,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                thumb.setOnClickListener(v->openAttachment(uri.toString(),mime));
             } else {
                 TextView video=new TextView(this);
                 video.setText("▶\n视频");
                 video.setGravity(android.view.Gravity.CENTER);
                 video.setTextColor(blue);
                 video.setBackground(rounded(0xFFE5F0FF,14));
-                video.setOnClickListener(v->{
-                    try {
-                        android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                        view.setDataAndType(uri,mime==null?"video/*":mime);
-                        view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(view);
-                    } catch(Exception e) { Toast.makeText(this,"无法预览视频",Toast.LENGTH_SHORT).show(); }
-                });
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
-                p.setMargins(3,4,7,5); attachmentPreview.addView(video,p);
+                tile.addView(video,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                video.setOnClickListener(v->openAttachment(uri.toString(),mime==null?"video/*":mime));
             }
+            TextView remove=new TextView(this);
+            remove.setText("×");
+            remove.setTextColor(0xFFFFFFFF);
+            remove.setTextSize(18);
+            remove.setTypeface(null,Typeface.BOLD);
+            remove.setGravity(android.view.Gravity.CENTER);
+            remove.setBackground(rounded(0xFFE04444,30));
+            android.widget.FrameLayout.LayoutParams removeLp=new android.widget.FrameLayout.LayoutParams(dp(25),dp(25),android.view.Gravity.TOP|android.view.Gravity.RIGHT);
+            removeLp.setMargins(0,dp(3),dp(3),0);
+            tile.addView(remove,removeLp);
+            remove.setOnClickListener(v->{
+                pendingAttachments.remove(uri);
+                refreshAttachmentPreview();
+                if(attachmentHint!=null) attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个附件");
+                Toast.makeText(this,"已移除该附件",Toast.LENGTH_SHORT).show();
+            });
+            attachmentPreview.addView(tile,p);
         }
     }
     private void addPendingAttachment(android.net.Uri uri) { if(uri!=null && !pendingAttachments.contains(uri)) pendingAttachments.add(uri); }
