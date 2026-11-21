@@ -839,7 +839,7 @@ public class MainActivity extends Activity {
                     imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                     imageView.setBackground(rounded(0xFFE5EDF6,12));
                     try{imageView.setImageURI(android.net.Uri.parse(attachment[0]));}catch(Exception ignored){}
-                    imageView.setOnClickListener(v->showAttachments(r[0]));
+                    imageView.setOnClickListener(v->openAttachment(attachment[0],attachment[1]));
                     mediaTile=imageView;
                 } else {
                     LinearLayout videoTile=new LinearLayout(this);
@@ -849,7 +849,7 @@ public class MainActivity extends Activity {
                     TextView play=new TextView(this);play.setText("▶");play.setTextSize(28);play.setTextColor(blue);play.setGravity(android.view.Gravity.CENTER);
                     TextView videoLabel=new TextView(this);videoLabel.setText("视频");videoLabel.setTextSize(12);videoLabel.setTextColor(ink);
                     videoTile.addView(play);videoTile.addView(videoLabel);
-                    videoTile.setOnClickListener(v->showAttachments(r[0]));
+                    videoTile.setOnClickListener(v->openAttachment(attachment[0],attachment[1]));
                     mediaTile=videoTile;
                 }
                 android.widget.GridLayout.LayoutParams tileLp=new android.widget.GridLayout.LayoutParams(
@@ -1754,15 +1754,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void openAttachment(String rawUri,String mime) {
+        try {
+            android.net.Uri uri=android.net.Uri.parse(rawUri);
+            android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
+            view.setDataAndType(uri,mime==null||mime.trim().isEmpty()?"*/*":mime);
+            view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(view);
+        } catch (Exception e) {
+            Toast.makeText(this,"无法打开附件："+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
     private void showAttachments(String code) {
         List<String[]> items = db.attachments(code);
         if (items.isEmpty()) { new AlertDialog.Builder(this).setMessage("该事故没有现场照片或视频附件。").setPositiveButton("关闭",null).show(); return; }
+        if(items.size()==1) { openAttachment(items.get(0)[0],items.get(0)[1]); return; }
         String[] labels = new String[items.size()];
-        for (int i=0;i<items.size();i++) labels[i] = (items.get(i)[1].startsWith("video/") ? "视频 " : "照片 / 文件 ") + (i+1);
-        new AlertDialog.Builder(this).setTitle("现场附件").setItems(labels,(dialog,index) -> {
-            try { android.net.Uri uri=android.net.Uri.parse(items.get(index)[0]); android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW); view.setDataAndType(uri,items.get(index)[1]); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view); }
-            catch (Exception e) { Toast.makeText(this,"无法打开附件："+e.getMessage(),Toast.LENGTH_LONG).show(); }
-        }).setPositiveButton("关闭",null).show();
+        for (int i=0;i<items.size();i++) labels[i] = ((items.get(i)[1]!=null&&items.get(i)[1].startsWith("video/")) ? "视频 " : "照片 ") + (i+1);
+        new AlertDialog.Builder(this).setTitle("选择要查看的附件").setItems(labels,(dialog,index) ->
+            openAttachment(items.get(index)[0],items.get(index)[1])).setPositiveButton("关闭",null).show();
     }
     @Override protected void onActivityResult(int requestCode,int resultCode,android.content.Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
@@ -1786,36 +1796,44 @@ public class MainActivity extends Activity {
         if(attachmentPreview==null) return;
         attachmentPreview.removeAllViews();
         int size=(int)(88*getResources().getDisplayMetrics().density);
-        for(android.net.Uri uri:pendingAttachments) {
+        for(android.net.Uri uri:new java.util.ArrayList<>(pendingAttachments)) {
             String mime=getContentResolver().getType(uri);
+            android.widget.FrameLayout tile=new android.widget.FrameLayout(this);
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
+            p.setMargins(3,4,7,5);
             if(mime!=null && mime.startsWith("image/")) {
                 ImageView thumb=new ImageView(this);
                 thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                thumb.setBackground(rounded(0xFFE5EDF6,12));
                 try { thumb.setImageURI(uri); } catch(Exception ignored) {}
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
-                p.setMargins(3,4,7,5); attachmentPreview.addView(thumb,p);
-                thumb.setOnClickListener(v->{
-                    try { android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                        view.setDataAndType(uri,mime); view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION); startActivity(view);
-                    } catch(Exception e) { Toast.makeText(this,"无法预览附件",Toast.LENGTH_SHORT).show(); }
-                });
+                tile.addView(thumb,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                thumb.setOnClickListener(v->openAttachment(uri.toString(),mime));
             } else {
                 TextView video=new TextView(this);
                 video.setText("▶\n视频");
                 video.setGravity(android.view.Gravity.CENTER);
                 video.setTextColor(blue);
                 video.setBackground(rounded(0xFFE5F0FF,14));
-                video.setOnClickListener(v->{
-                    try {
-                        android.content.Intent view=new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                        view.setDataAndType(uri,mime==null?"video/*":mime);
-                        view.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(view);
-                    } catch(Exception e) { Toast.makeText(this,"无法预览视频",Toast.LENGTH_SHORT).show(); }
-                });
-                LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(size,size);
-                p.setMargins(3,4,7,5); attachmentPreview.addView(video,p);
+                tile.addView(video,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                video.setOnClickListener(v->openAttachment(uri.toString(),mime==null?"video/*":mime));
             }
+            TextView remove=new TextView(this);
+            remove.setText("×");
+            remove.setTextColor(0xFFFFFFFF);
+            remove.setTextSize(18);
+            remove.setTypeface(null,Typeface.BOLD);
+            remove.setGravity(android.view.Gravity.CENTER);
+            remove.setBackground(rounded(0xFFE04444,30));
+            android.widget.FrameLayout.LayoutParams removeLp=new android.widget.FrameLayout.LayoutParams(dp(25),dp(25),android.view.Gravity.TOP|android.view.Gravity.RIGHT);
+            removeLp.setMargins(0,dp(3),dp(3),0);
+            tile.addView(remove,removeLp);
+            remove.setOnClickListener(v->{
+                pendingAttachments.remove(uri);
+                refreshAttachmentPreview();
+                if(attachmentHint!=null) attachmentHint.setText("现场照片 / 视频：已选择 "+pendingAttachments.size()+" 个附件");
+                Toast.makeText(this,"已移除该附件",Toast.LENGTH_SHORT).show();
+            });
+            attachmentPreview.addView(tile,p);
         }
     }
     private void addPendingAttachment(android.net.Uri uri) { if(uri!=null && !pendingAttachments.contains(uri)) pendingAttachments.add(uri); }
